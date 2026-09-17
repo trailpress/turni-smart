@@ -17,14 +17,14 @@ test('distingue il permesso negato dal GPS che non risponde', () => {
   assert.match(describeGeolocationError(null), /non disponibile/);
 });
 
-test('legge la posizione e prepara il link della mappa', async () => {
+test('legge la posizione e prepara il link del percorso', async () => {
   setGeolocation({ getCurrentPosition: (ok) => ok({ coords: { latitude: 45.07, longitude: 7.68 } }) });
-  const { readNearbyStopsUrl } = await import('../src/utils/nearbyStops.js');
-  assert.equal(await readNearbyStopsUrl(), 'https://www.google.com/maps/search/fermate+GTT/@45.070000,7.680000,16z');
+  const { readDepotDirectionsUrl } = await import('../src/utils/nearbyStops.js');
+  assert.match(await readDepotDirectionsUrl(), /^moovit:\/\/directions\?/);
 });
 
 test('un timeout fa ritentare senza alta precisione, un rifiuto no', async () => {
-  const { readNearbyStopsUrl } = await import('../src/utils/nearbyStops.js');
+  const { readDepotDirectionsUrl } = await import('../src/utils/nearbyStops.js');
 
   let calls = 0;
   setGeolocation({
@@ -34,7 +34,7 @@ test('un timeout fa ritentare senza alta precisione, un rifiuto no', async () =>
       else ok({ coords: { latitude: 45, longitude: 7 } });
     },
   });
-  await readNearbyStopsUrl();
+  await readDepotDirectionsUrl();
   assert.equal(calls, 2);
 
   calls = 0;
@@ -44,6 +44,6 @@ test('un timeout fa ritentare senza alta precisione, un rifiuto no', async () =>
       err({ code: 1 });
     },
   });
-  await assert.rejects(readNearbyStopsUrl(), /Permesso posizione negato/);
+  await assert.rejects(readDepotDirectionsUrl(), /Permesso posizione negato/);
   assert.equal(calls, 1);
 });

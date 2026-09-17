@@ -3,7 +3,6 @@ import {
   buildDepotDirectionsUrl,
   buildMoovitDirectionsUrl,
   buildMoovitWebUrl,
-  buildNearbyStopsUrl,
 } from './gttLinks.js';
 
 // Una lettura recente va benissimo per sapere cosa passa intorno: pretenderne
@@ -88,10 +87,6 @@ export function readPosition() {
       FIRST_TRY,
     );
   });
-}
-
-export function readNearbyStopsUrl() {
-  return readPositionUrl(buildNearbyStopsUrl);
 }
 
 export function readDepotDirectionsUrl() {

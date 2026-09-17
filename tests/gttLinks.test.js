@@ -13,7 +13,6 @@ import {
   buildGttPassagesTarget,
   buildMoovitDirectionsUrl,
   buildMoovitWebUrl,
-  buildNearbyStopsUrl,
 } from '../src/utils/gttLinks.js';
 
 test('risolve la palina per direzione', () => {
@@ -64,12 +63,6 @@ test('l etichetta usa il codice del posto cambio', () => {
   const target = buildGttPassagesTarget({ line: '71', place: 'CATT', direction: 'A' });
   assert.match(target.label, /CATT/);
   assert.match(target.title, /palina 307/);
-});
-
-test('le fermate vicine richiedono coordinate valide', () => {
-  assert.equal(buildNearbyStopsUrl({ lat: 45.07, lng: 7.68 }), 'https://www.google.com/maps/search/fermate+GTT/@45.070000,7.680000,16z');
-  assert.equal(buildNearbyStopsUrl({ lat: 'boh', lng: 7.68 }), '');
-  assert.equal(buildNearbyStopsUrl(), '');
 });
 
 test('nessun posto cambio porta coordinate scritte a occhio', () => {

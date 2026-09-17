@@ -1,3 +1,5 @@
+import { distanceMeters } from './gttPaline.js';
+
 // I capolinea delle linee del Gerbido, con la loro palina e il punto in cui
 // stanno. Vengono dal GTFS statico di GTT (istantanea del 12/07/2026, dal
 // repository BusRadar): per ogni linea si prende il primo e l'ultimo fermata di
@@ -11,6 +13,11 @@
 //
 // Il numero di palina non e' decorazione: e' la prova che il nome ha trovato la
 // fermata giusta, e la posizione da cui si misura quanto dista da chi cerca.
+//
+// E' anche l'unico elenco di posti del Gerbido con lat/lng gia' verificate per
+// ogni linea: serve percio' anche alla domanda opposta - non "a che distanza e'
+// il capolinea di questa linea", ma "quali linee hanno un capolinea qui vicino"
+// (-> findNearbyTermini, in fondo al file).
 export const TERMINI = {
   '5': [
     { code: '303', name: 'SICCARDI CAP', lat: 45.07296, lng: 7.67568 },
@@ -200,4 +207,51 @@ export function findTerminus(line, name) {
   // pareggio non si scioglie a caso: meglio nessuna posizione che quella
   // sbagliata.
   return matches.length === 1 ? matches[0] : null;
+}
+
+// Oltre questa distanza un capolinea non e' piu' "qui vicino": e' un altro
+// quartiere. Duemilacinquecento metri sono una mezz'ora a piedi, il limite
+// oltre cui la domanda non e' piu' "cosa passa qui" ma "come arrivo li'".
+const NEARBY_MAX_METERS = 2500;
+const NEARBY_LIMIT = 6;
+
+/**
+ * Le linee del Gerbido il cui capolinea sta vicino a una posizione data.
+ *
+ * Risponde alla domanda opposta di `findTerminus`: non "dov'e' il capolinea di
+ * questa linea", ma "quali linee hanno un capolinea qui vicino". E' quanto
+ * basta per dire onestamente "qui passa la tale linea", con la palina a prova
+ * — mai "qui vicino ci sono fermate", che senza sapere quali linee ci passano
+ * non risponde a niente.
+ *
+ * Un capolinea puo' essere condiviso da piu' linee - Bertola dalla 58 e dalla
+ * 58/, Cattaneo dalla 5 e dalla 71 - e in quel caso compare una volta sola, con
+ * tutte le linee che lo usano. Il raggruppamento e' per numero di palina: due
+ * paline diverse restano due punti diversi anche se stanno vicine, perche'
+ * sono davvero due fermate (andata e ritorno).
+ *
+ * Copre solo i capolinea, non ogni fermata della rete: e' l'unico dato che
+ * questo progetto ha verificato palina per palina (-> docs/dati.md). Lontano
+ * da un capolinea la risposta e' onestamente "niente", non una fermata
+ * indovinata.
+ */
+export function findNearbyTermini(position, { limit = NEARBY_LIMIT, maxMeters = NEARBY_MAX_METERS } = {}) {
+  if (!position) return [];
+
+  const byCode = new Map();
+  Object.entries(TERMINI).forEach(([line, stops]) => {
+    stops.forEach((stop) => {
+      const meters = distanceMeters(position, stop);
+      if (meters === null || meters > maxMeters) return;
+      if (!byCode.has(stop.code)) {
+        byCode.set(stop.code, { code: stop.code, lat: stop.lat, lines: new Set(), lng: stop.lng, meters, name: stop.name });
+      }
+      byCode.get(stop.code).lines.add(line);
+    });
+  });
+
+  return [...byCode.values()]
+    .map((item) => ({ ...item, lines: [...item.lines].sort((a, b) => a.localeCompare(b, undefined, { numeric: true })) }))
+    .sort((a, b) => a.meters - b.meters)
+    .slice(0, limit);
 }

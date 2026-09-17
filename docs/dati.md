@@ -200,6 +200,24 @@ Il limite e' solo verso l'alto: il capolinea della 74 e' il deposito stesso, e i
 suoi due minuti su zero metri sono il tempo di entrare, non una velocita'
 impossibile.
 
+### La stessa tabella, letta al contrario
+
+`findNearbyTermini(posizione)` fa la domanda opposta di `findTerminus`: non
+"dov'e' il capolinea di questa linea", ma "quali linee hanno un capolinea qui
+vicino". Risponde a "Cosa passa qui vicino" nel pannello Rientri.
+
+Fino al 17 settembre quel bottone apriva una ricerca Google Maps di "fermate
+GTT": una mappa di puntini senza scritto sopra quale linea ci passasse, e
+serviva un secondo tocco per vederla — da qui sembrava che il bottone "non si
+aprisse". Con `gttTermini.js` gia' in casa, verificato palina per palina, non
+serve uscire dall'app ne' indovinare niente: si mostra solo cio' che e'
+verificato, ed entro due chilometri e mezzo si dice onestamente quando non c'e'
+niente, invece di mostrare una fermata a caso.
+
+Copre solo i capolinea, non ogni fermata della rete. Lontano da un capolinea la
+risposta e' vuota: non e' un buco da riempire con un altro dato indovinato, e'
+l'onesta' di dire cio' che si sa.
+
 ---
 
 ## I PDF di GTT

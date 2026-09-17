@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { findTerminus, TERMINI } from '../src/constants/gttTermini.js';
+import { findNearbyTermini, findTerminus, TERMINI } from '../src/constants/gttTermini.js';
 
 test('il nome del grafico trova il capolinea di quella linea', () => {
   assert.equal(findTerminus('74', 'V. Gorini').code, '693');
@@ -48,4 +48,46 @@ test('ogni capolinea porta palina, nome e posizione dentro Torino', () => {
     assert.ok(stop.lat > 44.9 && stop.lat < 45.3, `${stop.name} fuori Torino`);
     assert.ok(stop.lng > 7.3 && stop.lng < 7.9, `${stop.name} fuori Torino`);
   });
+});
+
+test('in piedi sul capolinea, la linea si vede', () => {
+  // Cattaneo, palina 308: capolinea della 5 e della 71.
+  const [vicino] = findNearbyTermini({ lat: 45.03618, lng: 7.62581 });
+  assert.equal(vicino.code, '308');
+  assert.equal(vicino.meters, 0);
+  assert.deepEqual(vicino.lines, ['5', '71']);
+});
+
+test('un capolinea condiviso compare una volta sola, con tutte le sue linee', () => {
+  // Bertola, palina 1683: capolinea della 58 e della 58/. Senza il
+  // raggruppamento per palina sarebbe comparso due volte.
+  const risultati = findNearbyTermini({ lat: 45.06996, lng: 7.68134 });
+  const bertola = risultati.filter((item) => item.code === '1683');
+  assert.equal(bertola.length, 1);
+  assert.deepEqual(bertola[0].lines, ['58', '58B']);
+});
+
+test('due paline vicine restano due punti diversi', () => {
+  // GORINI (690, sulla 38) e GORINI OVEST (691, sulla 38): due fermate vere,
+  // non la stessa cosa scritta due volte.
+  const risultati = findNearbyTermini({ lat: 45.04179, lng: 7.59288 }, { maxMeters: 500 });
+  const codici = risultati.map((item) => item.code);
+  assert.ok(codici.includes('690'));
+  assert.ok(codici.includes('691'));
+});
+
+test('lontano da ogni capolinea del Gerbido, la risposta e onestamente vuota', () => {
+  // In mezzo alla pianura, lontano da Torino: nessun capolinea del Gerbido.
+  assert.deepEqual(findNearbyTermini({ lat: 44.5, lng: 7.0 }), []);
+  assert.deepEqual(findNearbyTermini(null), []);
+});
+
+test('il piu vicino viene prima, e il raggio si puo restringere', () => {
+  const risultati = findNearbyTermini({ lat: 45.03618, lng: 7.62581 });
+  for (let i = 1; i < risultati.length; i += 1) {
+    assert.ok(risultati[i].meters >= risultati[i - 1].meters);
+  }
+  // Stringendo il raggio a zero, resta solo il punto esatto.
+  const stretto = findNearbyTermini({ lat: 45.03618, lng: 7.62581 }, { maxMeters: 0 });
+  assert.deepEqual(stretto.map((item) => item.code), ['308']);
 });

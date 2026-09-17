@@ -2997,6 +2997,45 @@ a.inline-action--gtt {
   font-variant-numeric: tabular-nums;
 }
 
+/* La risposta a "Cosa passa qui vicino": stessa lingua visiva delle prossime
+   corse qui sopra, perche' e' la stessa cosa - un elenco di righe compatte -
+   ma senza il bordo tratteggiato, per non sembrare un contenitore in attesa. */
+.depot-returns-nearby {
+  display: grid;
+  gap: 6px;
+}
+
+.depot-returns-nearby__list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.depot-returns-nearby__list li {
+  display: grid;
+  grid-template-columns: minmax(88px, 0.7fr) minmax(110px, 0.9fr) minmax(120px, 1fr);
+  gap: var(--s2);
+  align-items: center;
+  min-height: 40px;
+  border-radius: 10px;
+  background: rgba(16, 43, 69, 0.58);
+  padding: 6px 10px;
+}
+
+.depot-returns-nearby__list strong {
+  color: #ffffff;
+  font-size: 0.88rem;
+}
+
+.depot-returns-nearby__list span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Tre righe e basta: chi e da dove, quando parte e quando arriva, il contorno.
    Ogni dato compare una volta sola. */
 .depot-return-card {
@@ -5386,6 +5425,15 @@ a.inline-action--gtt {
   }
 
   .depot-returns-upcoming li span:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .depot-returns-nearby__list li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 2px 10px;
+  }
+
+  .depot-returns-nearby__list li span:last-child {
     grid-column: 1 / -1;
   }
 

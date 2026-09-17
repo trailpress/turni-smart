@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 24 agosto 2026 · 251 test verdi · issue aperte: #63, #64*
+*Aggiornato: 17 settembre 2026 · 255 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -24,7 +24,7 @@ ferma dopo aver speso tutto il giro di avvio. E' gia' successo.
 
 | Area | Conversazione | Stato |
 |---|---|---|
-| Rientri in deposito | sessione del 24 agosto | chiusa |
+| Rientri in deposito | sessione del 17 settembre | chiusa |
 | Uscite dal deposito (#62) | sessione del 21 agosto | chiusa |
 | BusRadar dentro l'app | altra conversazione (PR #60) | ultima attivita' 14 agosto |
 | Documentazione e processo | sessione del 21 agosto | chiusa |
@@ -70,6 +70,16 @@ lo dicono, invece di arrangiarsi.
 **Senza rete** — service worker, l'app si apre anche offline. Le versioni nuove
 le mette in uso da sola, all'apertura o a schermo spento: non le chiede piu'
 (→ `decisioni/0011`).
+
+**Cosa passa qui vicino** — dal 17 settembre non apre piu' una mappa esterna
+senza dentro le linee: calcola in casa, da `gttTermini.js`, quali capolinea del
+Gerbido stanno entro 2,5 km da dove si e', e con quali linee - un capolinea
+condiviso, come Bertola per la 58 e la 58/, compare una volta sola. Un tocco
+solo, niente da aprire fuori dall'app. Anche il GPS che non risponde mai - il
+permesso rimasto in sospeso, il caso dietro «non si apre il localizzatore» - ha
+adesso una scadenza in ogni punto del pannello dove si legge la posizione, non
+solo in "Trova rientri da qui": prima "Cosa passa qui vicino" e "Come arrivo al
+Gerbido" potevano restare "Leggo la posizione…" per sempre.
 
 ---
 
@@ -121,6 +131,13 @@ Cose vere ma che nessuno ha mai lamentato. Se danno fastidio, diventano issue.
   `GERBIDO_LINES` e non ce l'ho messa.
 - Piazza Massaua: codice di quattro lettere, e quale palina per quale senso
   ([#63](https://github.com/trailpress/turni-smart/issues/63)).
+- **«Non riporta esattamente le linee che stanno rientrando»**, il 17
+  settembre - dopo che la correzione dello stesso giorno (i rientri persi per
+  strada, vedi sopra) era gia' stata pubblicata. Non riprodotto: serve un
+  referto `?diag=orari` fresco - ricaricato il PDF dopo l'aggiornamento - o una
+  schermata della scheda che non torna, con l'orario vero della linea a
+  confronto. Senza uno dei due si rischia di correggere un difetto gia'
+  chiuso.
 
 
 ---
