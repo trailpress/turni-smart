@@ -2815,7 +2815,6 @@ select:focus-visible {
 
 /* Il link pronto deve leggersi come "tocca qui": bordo giallo e niente
    sottolineatura, ma resta un <a> per aprirsi col gesto dell'utente. */
-.depot-returns-nearby-link,
 a.inline-action {
   display: inline-flex;
   align-items: center;
@@ -2860,6 +2859,29 @@ a.inline-action--gtt {
   font-weight: 900;
   padding: 4px 0;
   text-decoration: underline;
+}
+
+/* "Cosa passa qui vicino" e' un ripiego leggero, non un secondo bottone
+   principale: stesso trattamento del link "ci arrivo in tempo?" sulle schede,
+   non della pillola blu di "Trova rientri da qui". Tre pillole identiche una
+   accanto all'altra si leggevano come tre varianti della stessa domanda. */
+.depot-returns-nearby-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  border: 0;
+  background: none;
+  color: var(--cyan);
+  cursor: pointer;
+  font-size: 0.8rem;
+  font-weight: 900;
+  padding: 4px 0;
+  text-decoration: underline;
+}
+
+.depot-returns-nearby-toggle svg {
+  color: var(--yellow);
 }
 
 .depot-returns-lines {

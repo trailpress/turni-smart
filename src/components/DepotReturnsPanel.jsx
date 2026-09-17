@@ -519,46 +519,28 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
             <Icon name="mapPin" size={18} />
             {geoState === 'reading' ? 'Leggo la posizione…' : 'Trova rientri da qui'}
           </button>
-          {/* Non apre piu' niente fuori dall'app: la risposta - quali linee del
-              Gerbido hanno un capolinea qui vicino - la calcola l'app stessa e
-              la mostra subito sotto, con un solo tocco. Prima apriva una
-              ricerca Google Maps di "fermate GTT" che non diceva quali linee,
-              e serviva un secondo tocco per aprirla: sembrava non fare niente. */}
-          <button
-            className="small-button"
-            disabled={nearbyBusy}
-            onClick={findNearby}
-            title="Le linee del Gerbido il cui capolinea e' vicino a dove sei adesso"
-            type="button"
-          >
-            <Icon name="mapPin" size={18} />
-            {nearbyBusy ? 'Leggo la posizione…' : 'Cosa passa qui vicino'}
-          </button>
-          {positionLink?.kind === 'depot' ? (
-            <a
-              className="small-button depot-returns-nearby-link"
-              href={positionLink.url}
-              onClick={() => setPositionLink(null)}
-              rel="noopener noreferrer"
-            >
-              <Icon name="route" size={18} />
-              Apri il percorso nell&apos;app Moovit
-            </a>
-          ) : (
-            <button
-              className="small-button"
-              disabled={Boolean(geoBusy)}
-              onClick={() => openWithPosition(readDepotDirectionsUrl, 'depot')}
-              title="Linee, orari e cambi per arrivare al deposito da dove sei adesso, nell'app Moovit"
-              type="button"
-            >
-              <Icon name="route" size={18} />
-              {geoBusy === 'depot' ? 'Leggo la posizione…' : 'Come arrivo al Gerbido'}
-            </button>
-          )}
         </div>
 
       </form>
+
+      {/* Un solo bottone principale, non tre pillole uguali una accanto
+          all'altra: "Cosa passa qui vicino" e "Come arrivo al Gerbido"
+          usavano lo stesso blu e la stessa forma di "Trova rientri da qui", e
+          si leggevano come tre varianti della stessa cosa invece che tre
+          risposte diverse. "Come arrivo al Gerbido" c'era gia' anche nel
+          ripiego qui sotto, per quando davvero serve: qui sopra era solo
+          ripetuto. "Cosa passa qui vicino" resta, ma come link di testo - un
+          ripiego leggero, non un secondo bottone da scegliere. */}
+      <button
+        className="depot-returns-nearby-toggle"
+        disabled={nearbyBusy}
+        onClick={findNearby}
+        title="Le linee del Gerbido il cui capolinea e' vicino a dove sei adesso"
+        type="button"
+      >
+        <Icon name="mapPin" size={14} />
+        {nearbyBusy ? 'Leggo la posizione…' : 'Cosa passa qui vicino'}
+      </button>
 
       {/* La risposta a "Cosa passa qui vicino", subito qui sotto il bottone:
           niente da aprire, niente secondo tocco. Un capolinea condiviso da piu'

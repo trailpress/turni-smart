@@ -88,6 +88,14 @@ L'orario dice quando e da dove parte un rientro; se il mezzo sta passando
 proprio adesso da dove si e', lo dice solo un dato in tempo reale, e quello lo
 ha l'altra applicazione, non questa.
 
+**Rientri, in cima un bottone solo** — "Trova rientri da qui", "Cosa passa qui
+vicino" e "Come arrivo al Gerbido" erano tre pillole identiche una accanto
+all'altra, e "Come arrivo al Gerbido" c'era anche due volte: qui sopra e nel
+ripiego in fondo, per lo stesso identico bottone. Segnalato dall'utente come
+«troppa ridondanza». Adesso in cima resta un solo bottone principale; "Cosa
+passa qui vicino" e' un link di testo sotto, leggero; "Come arrivo al Gerbido"
+resta solo dove serve davvero, nel ripiego di quando nessun mezzo rientra.
+
 ---
 
 ## Cosa resta aperto
