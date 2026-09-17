@@ -81,6 +81,13 @@ adesso una scadenza in ogni punto del pannello dove si legge la posizione, non
 solo in "Trova rientri da qui": prima "Cosa passa qui vicino" e "Come arrivo al
 Gerbido" potevano restare "Leggo la posizione…" per sempre.
 
+**Rientri, verso il mezzo vero** — la pillola della linea su ogni scheda si
+tocca e apre BusRadar, la mappa dal vivo dei mezzi GTT: e' la risposta a «sta
+per passare qui davvero?», che l'orario da solo non puo' dare (→ `dati.md`).
+L'orario dice quando e da dove parte un rientro; se il mezzo sta passando
+proprio adesso da dove si e', lo dice solo un dato in tempo reale, e quello lo
+ha l'altra applicazione, non questa.
+
 ---
 
 ## Cosa resta aperto

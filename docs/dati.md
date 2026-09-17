@@ -218,6 +218,26 @@ Copre solo i capolinea, non ogni fermata della rete. Lontano da un capolinea la
 risposta e' vuota: non e' un buco da riempire con un altro dato indovinato, e'
 l'onesta' di dire cio' che si sa.
 
+### Cosa l'orario non puo' dire, e cosa lo puo'
+
+Chiesto il 17 settembre: «individuare dall'orario dei turni le linee che
+stanno per rientrare, e poi dirmi che quella linea sta per passare nella tua
+posizione».
+
+La prima meta' la fa gia' la ricerca dei rientri: filtra per orario e mostra la
+distanza dal punto in cui il rientro comincia. La seconda meta' - *sta per
+passare proprio qui, adesso* - l'orario stampato non la puo' dare, per quanto
+lo si incroci con il GPS: dice quando e da dove parte una corsa, non dove si
+trova il mezzo in questo istante. Traffico, ritardi, una coincidenza mancata -
+niente di tutto questo sta scritto su un PDF mensile.
+
+Quella domanda ha una risposta, ma la da' un dato diverso: la posizione vera
+del mezzo, in tempo reale. E' esattamente cio' che fa **BusRadar**, l'altra
+applicazione di chi guida queste linee (→ `architettura.md`). Per questo la
+pillola della linea su ogni scheda di rientro apre la sua mappa dal vivo,
+filtrata su quella linea: non si inventa una vicinanza che l'orario da solo non
+puo' garantire, si manda a vedere quella vera.
+
 ---
 
 ## I PDF di GTT

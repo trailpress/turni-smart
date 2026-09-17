@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getLineDisplayName } from '../constants/depotGerbido.js';
 import { findNearbyTermini } from '../constants/gttTermini.js';
+import { buildBusRadarTarget } from '../utils/busRadar.js';
 import {
   ANY_PLACE,
   formatClock,
@@ -19,6 +20,7 @@ import {
 import { getChangePointLabel, getChangePointStop } from '../constants/changePoints.js';
 import { stripPlaceRole } from '../parserRientri.js';
 import { formatMinutes } from '../utils/timeUtils.js';
+import { BusRadarModal } from './BusRadarPanel.jsx';
 import { Icon } from './Icon.jsx';
 
 // La ricerca e' istantanea: la barra resta visibile il minimo che basta a
@@ -92,6 +94,17 @@ function formatWindow(windowMinutes) {
   if (windowMinutes < 60) return `${windowMinutes} minuti`;
   const hours = windowMinutes / 60;
   return hours === 1 ? '1 ora' : `${hours} ore`;
+}
+
+/* Il grafico dice il posto dove la corsa finisce e l'ora, non se il mezzo sta
+   passando proprio adesso da dove sei: quella e' la posizione vera del mezzo
+   in questo momento, e un orario stampato non la puo' dare, per quanto lo si
+   incroci con il GPS. Solo un dato in tempo reale risponde a "sta per passare
+   qui" - e BusRadar, l'altra applicazione di chi guida queste linee, mostra i
+   mezzi della linea sulla mappa dal vivo. Qui non si inventa una vicinanza che
+   l'orario da solo non puo' dare: si manda a vedere quella vera. */
+function getReturnBusRadarTarget(item) {
+  return buildBusRadarTarget({ line: item.line, place: item.from });
 }
 
 // Oltre questo si smette di aspettare il GPS e si dice che la posizione non c'e'.
@@ -168,6 +181,9 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
   const [nearbyAsked, setNearbyAsked] = useState(false);
   const [nearbyBusy, setNearbyBusy] = useState(false);
   const [nearbyError, setNearbyError] = useState('');
+  // Il rientro di cui si sta guardando la mappa dal vivo: uno solo alla
+  // volta, come lo sviluppo turno.
+  const [mapItem, setMapItem] = useState(null);
 
   function findNearby() {
     setNearbyAsked(true);
@@ -281,6 +297,7 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
   function renderCard(item) {
     const stop = getChangePointStop(item.from, { line: item.line });
     const line = getLineDisplayName(item.line);
+    const mapTarget = getReturnBusRadarTarget(item);
     return (
       <article
         className={`depot-return-card${item.reachable === false ? ' depot-return-card--far' : ''}`}
@@ -289,9 +306,27 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
         {/* La pillola gialla e' il numero della linea. Senza numero sarebbe una
             macchia gialla vuota, che non dice ne' cosa prendere ne' che il dato
             manca: in quel caso lo si scrive. I tratti si dicono solo quando
-            sono piu' di uno. */}
+            sono piu' di uno. Quando si sa dove cercarla, la pillola si tocca:
+            apre la mappa dal vivo di BusRadar, per vedere se il mezzo sta
+            passando davvero qui vicino - cosa che l'orario da solo non dice. */}
         <p className="depot-return-card__head" title={item.route}>
-          {line ? <strong>{line}</strong> : <span>linea non indicata sul grafico</span>}
+          {line ? (
+            mapTarget ? (
+              <button
+                className="depot-return-card__line"
+                onClick={() => setMapItem(item)}
+                title={mapTarget.title}
+                type="button"
+              >
+                <Icon name="mapPin" size={12} />
+                {line}
+              </button>
+            ) : (
+              <strong>{line}</strong>
+            )
+          ) : (
+            <span>linea non indicata sul grafico</span>
+          )}
           {item.direct ? '' : `${item.legs.length} tratti`}
         </p>
         {/* I due orari sono l'uno il passaggio alla palina dove si sale e
@@ -689,6 +724,15 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
             </button>
           )}
         </div>
+      ) : null}
+
+      {mapItem ? (
+        <BusRadarModal
+          onClose={() => setMapItem(null)}
+          subtitle={`${mapItem.departure} - ${mapItem.arrival} · ${placeLabel(mapItem.from)} → ${DEPOT_LABEL}`}
+          target={getReturnBusRadarTarget(mapItem)}
+          title={`Linea ${getLineDisplayName(mapItem.line)}`}
+        />
       ) : null}
 
     </section>
