@@ -9,7 +9,6 @@ import { getLineDisplayName, normalizeLineCode } from '../constants/depotGerbido
 
 const GTT_ARRIVALS_BASE_URL = 'https://www.gtt.to.it/cms/percorari/arrivi';
 const GTT_URBAN_BASE_URL = 'https://www.gtt.to.it/cms/percorari/urbano';
-const MAPS_SEARCH_BASE_URL = 'https://www.google.com/maps/search/';
 const MAPS_DIRECTIONS_URL = 'https://www.google.com/maps/dir/';
 const MOOVIT_WEB_URL = 'https://moovitapp.com/';
 // Lo schema dell'app: un indirizzo https resta una pagina web e il telefono la
@@ -43,16 +42,6 @@ function buildLineUrl(line) {
     view: 'percorsi',
   });
   return `${GTT_URBAN_BASE_URL}?${params.toString()}`;
-}
-
-/**
- * Le fermate intorno a dove ci si trova adesso: e' l'unico dato di posizione
- * che non richiede una mappa di paline scritta a mano, e quindi l'unico che non
- * puo' mandare su una fermata sbagliata.
- */
-export function buildNearbyStopsUrl({ lat, lng } = {}) {
-  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return '';
-  return `${MAPS_SEARCH_BASE_URL}fermate+GTT/@${lat.toFixed(6)},${lng.toFixed(6)},16z`;
 }
 
 /**

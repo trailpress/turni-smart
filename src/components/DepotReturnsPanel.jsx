@@ -1,18 +1,19 @@
 import { useEffect, useMemo, useState } from 'react';
 import { getLineDisplayName } from '../constants/depotGerbido.js';
+import { findNearbyTermini } from '../constants/gttTermini.js';
 import {
   ANY_PLACE,
   formatClock,
   MAX_RIDE_MINUTES,
   RETURN_WINDOW_MINUTES,
   searchReturns,
+  walkingMinutes,
   withDistance,
 } from '../utils/depotReturns.js';
 import {
   readChangePointDirectionsUrl,
   readDepotDirectionsUrl,
   readDepotMapsDirectionsUrl,
-  readNearbyStopsUrl,
   readPosition,
 } from '../utils/nearbyStops.js';
 import { getChangePointLabel, getChangePointStop } from '../constants/changePoints.js';
@@ -25,9 +26,6 @@ import { Icon } from './Icon.jsx';
 const SEARCH_FEEDBACK_MS = 520;
 
 const UPCOMING_LIMIT = 3;
-
-// Oltre questo si smette di aspettare il GPS e si dice che la posizione non c'e'.
-const GEO_DEADLINE_MS = 12000;
 
 // Il deposito e' sempre lo stesso: sulle schede basta il nome corto.
 const DEPOT_LABEL = 'Gerbido';
@@ -72,6 +70,14 @@ function formatDistance(item) {
   return `a ${distanza} · ${item.walkMinutes} min a piedi`;
 }
 
+/* La stessa distanza, per un capolinea vicino che non e' un rientro da
+   prendere: qui non c'e' un "ci arrivi in tempo", c'e' solo quanto e' vicino. */
+function formatNearbyDistance(meters) {
+  const distanza = meters >= 1000 ? `${(meters / 1000).toFixed(1)} km` : `${meters} m`;
+  const minutes = walkingMinutes(meters);
+  return minutes ? `a ${distanza} · ${minutes} min a piedi` : `a ${distanza}`;
+}
+
 /* La fine della finestra cercata. Il riepilogo diceva solo «dalle 12:13», e da
    li' non si capiva fin dove avesse guardato: adesso dice l'intervallo intero,
    che e' esattamente la domanda a cui sta rispondendo. */
@@ -86,6 +92,41 @@ function formatWindow(windowMinutes) {
   if (windowMinutes < 60) return `${windowMinutes} minuti`;
   const hours = windowMinutes / 60;
   return hours === 1 ? '1 ora' : `${hours} ore`;
+}
+
+// Oltre questo si smette di aspettare il GPS e si dice che la posizione non c'e'.
+const GEO_DEADLINE_MS = 12000;
+
+/* Il GPS puo' anche non rispondere mai: sul telefono capita al chiuso, o
+   quando il permesso resta in sospeso senza che nessuno lo sciolga. Senza una
+   scadenza nostra un bottone che aspetta la posizione resta "Leggo la
+   posizione…" per sempre, e da fuori non si distingue da un bottone rotto -
+   e' il difetto dietro "non si apre il localizzatore". Ogni lettura della
+   posizione di questo pannello passa da qui, cosi' nessuna ne resta senza. */
+function withGeoDeadline(promise) {
+  return new Promise((resolve, reject) => {
+    let settled = false;
+    const giveUp = setTimeout(() => {
+      if (settled) return;
+      settled = true;
+      reject(new Error('Il GPS non ha risposto in tempo: riprova, se puoi all aperto.'));
+    }, GEO_DEADLINE_MS);
+
+    promise.then(
+      (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(giveUp);
+        resolve(value);
+      },
+      (error) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(giveUp);
+        reject(error);
+      },
+    );
+  });
 }
 
 export function DepotReturnsPanel({ developments = {}, places = {}, staleParse = false }) {
@@ -120,6 +161,31 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
      raccontarlo: senza uno stato, un GPS che non risponde e un GPS mai chiesto
      si vedono uguali, cioe' non si vedono. */
   const [geoState, setGeoState] = useState('idle');
+  // Le linee vicine si chiedono a parte: non serve impostare orario e finestra
+  // per sapere solo cosa passa qui. Tre stati bastano - non richiesta, in
+  // lettura, richiesta - perche' il risultato, una volta letta la posizione,
+  // sta gia' in `here` e si calcola da li'.
+  const [nearbyAsked, setNearbyAsked] = useState(false);
+  const [nearbyBusy, setNearbyBusy] = useState(false);
+  const [nearbyError, setNearbyError] = useState('');
+
+  function findNearby() {
+    setNearbyAsked(true);
+    setNearbyError('');
+    // La posizione puo' essere gia' nota - da una ricerca fatta prima - e in
+    // quel caso non c'e' niente da chiedere di nuovo al telefono.
+    if (here) return;
+    setNearbyBusy(true);
+    withGeoDeadline(readPosition())
+      .then((position) => {
+        setHere(position);
+        setGeoState('ok');
+      })
+      .catch((error) => setNearbyError(error.message))
+      .finally(() => setNearbyBusy(false));
+  }
+
+  const nearbyTermini = useMemo(() => (here ? findNearbyTermini(here) : []), [here]);
 
   // Due link diversi, uno solo alla volta: le fermate intorno, oppure il
   // percorso in mezzi fino al deposito calcolato sulla rete GTT vera.
@@ -127,7 +193,7 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
     setGeoMessage('');
     setPositionLink(null);
     setGeoBusy(kind);
-    reader()
+    withGeoDeadline(reader())
       .then((url) => setPositionLink({ kind, url }))
       .catch((error) => setGeoMessage(error.message))
       .finally(() => setGeoBusy(''));
@@ -161,30 +227,12 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
     setSearching(true);
     setGeoState('reading');
 
-    /* Il GPS puo' anche non rispondere mai: sul telefono capita al chiuso e
-       quando il permesso resta in sospeso. Senza una scadenza nostra il
-       pannello direbbe "cerco dove sei" per sempre, che e' peggio di dire che
-       la posizione non c'e'. */
-    let settled = false;
-    const giveUp = setTimeout(() => {
-      if (settled) return;
-      settled = true;
-      setHere(null);
-      setGeoState('off');
-    }, GEO_DEADLINE_MS);
-
-    readPosition()
+    withGeoDeadline(readPosition())
       .then((position) => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(giveUp);
         setHere(position);
         setGeoState('ok');
       })
       .catch(() => {
-        if (settled) return;
-        settled = true;
-        clearTimeout(giveUp);
         setHere(null);
         setGeoState('off');
       });
@@ -436,29 +484,21 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
             <Icon name="mapPin" size={18} />
             {geoState === 'reading' ? 'Leggo la posizione…' : 'Trova rientri da qui'}
           </button>
-          {positionLink?.kind === 'stops' ? (
-            <a
-              className="small-button depot-returns-nearby-link"
-              href={positionLink.url}
-              onClick={() => setPositionLink(null)}
-              rel="noopener noreferrer"
-              target="_blank"
-            >
-              <Icon name="mapPin" size={18} />
-              Apri la mappa delle fermate
-            </a>
-          ) : (
-            <button
-              className="small-button"
-              disabled={Boolean(geoBusy)}
-              onClick={() => openWithPosition(readNearbyStopsUrl, 'stops')}
-              title="Trova le fermate intorno a dove sei adesso, per vedere quali linee ci passano"
-              type="button"
-            >
-              <Icon name="mapPin" size={18} />
-              {geoBusy === 'stops' ? 'Leggo la posizione…' : 'Cosa passa qui vicino'}
-            </button>
-          )}
+          {/* Non apre piu' niente fuori dall'app: la risposta - quali linee del
+              Gerbido hanno un capolinea qui vicino - la calcola l'app stessa e
+              la mostra subito sotto, con un solo tocco. Prima apriva una
+              ricerca Google Maps di "fermate GTT" che non diceva quali linee,
+              e serviva un secondo tocco per aprirla: sembrava non fare niente. */}
+          <button
+            className="small-button"
+            disabled={nearbyBusy}
+            onClick={findNearby}
+            title="Le linee del Gerbido il cui capolinea e' vicino a dove sei adesso"
+            type="button"
+          >
+            <Icon name="mapPin" size={18} />
+            {nearbyBusy ? 'Leggo la posizione…' : 'Cosa passa qui vicino'}
+          </button>
           {positionLink?.kind === 'depot' ? (
             <a
               className="small-button depot-returns-nearby-link"
@@ -484,6 +524,40 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
         </div>
 
       </form>
+
+      {/* La risposta a "Cosa passa qui vicino", subito qui sotto il bottone:
+          niente da aprire, niente secondo tocco. Un capolinea condiviso da piu'
+          linee - Bertola dalla 58 e dalla 58/, Cattaneo dalla 5 e dalla 71 -
+          compare una volta sola con tutte le sue linee. */}
+      {nearbyAsked ? (
+        <div className="depot-returns-nearby">
+          {nearbyBusy ? (
+            <p className="depot-returns-geo depot-returns-geo--off">
+              <Icon name="mapPin" size={14} />
+              Cerco dove sei…
+            </p>
+          ) : nearbyError ? (
+            <p className="depot-returns-message">{nearbyError}</p>
+          ) : nearbyTermini.length ? (
+            <ul className="depot-returns-nearby__list">
+              {nearbyTermini.map((item) => (
+                <li key={item.code}>
+                  <strong>{item.lines.map((line) => getLineDisplayName(line)).join(' · ')}</strong>
+                  <span>
+                    {item.name} · palina {item.code}
+                  </span>
+                  <span>{formatNearbyDistance(item.meters)}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="depot-returns-message">
+              Nessun capolinea del Gerbido entro due chilometri e mezzo da qui: qui vicino non passa nessuna delle
+              linee del deposito.
+            </p>
+          )}
+        </div>
+      ) : null}
 
       {searching ? (
         <div className="depot-returns-progress" role="status">
