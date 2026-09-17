@@ -3072,6 +3072,30 @@ a.inline-action--gtt {
   padding: 3px 10px;
 }
 
+/* La stessa pillola, ma un bottone: quando si sa dove cercare il mezzo su
+   BusRadar, la linea si tocca. L'icona dentro dice che c'e' altro sotto,
+   senza aggiungere una riga alla scheda - che ne ha gia' tre, e bastano. */
+.depot-return-card__line {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 38px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--yellow);
+  color: #04243f;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 950;
+  text-align: center;
+  padding: 3px 10px 3px 8px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.depot-return-card__line:active {
+  filter: brightness(0.94);
+}
+
 /* Ogni orario porta sotto il posto a cui si riferisce: il primo e' il passaggio
    dalla palina dove si sale, non la partenza dal capolinea della linea. */
 /* Le due meta' si dividono lo spazio invece di prenderselo: con `auto` un nome
