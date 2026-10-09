@@ -206,3 +206,21 @@ test('quando i conti tornano il referto lo dice, invece di tacere', () => {
   });
   assert.match(report, /conti confrontabili su tutte le linee/);
 });
+
+test('il referto elenca gli sviluppi con tratti sovrapposti, con vettura e ripresa', () => {
+  const seg = (start, end, vett, run_id) => ({ start, end, loc_s: 'SIRA', loc_e: 'SIRA', vett, run_id, gt: 'LUN - VEN' });
+  const developments = {
+    '56 56': [seg('11:08', '13:37', '13', 4), seg('11:56', '13:49', '14', 9), seg('14:58', '18:23', '6', 4)],
+    '56 58': [seg('08:08', '12:41', '8', 5), seg('13:45', '15:43', '11', 5)],
+  };
+  const report = buildOrariReport({ developments });
+
+  assert.match(report, /sviluppi con tratti sovrapposti: 1/);
+  assert.match(report, /56 56 "LUN - VEN": 11:08-13:37 SIRA>SIRA v13 #4 \| 11:56-13:49 SIRA>SIRA v14 #9/);
+  assert.doesNotMatch(report, /56 58 "LUN - VEN"/);
+});
+
+test('senza sovrapposizioni il referto lo dice', () => {
+  const developments = { '56 58': [{ start: '08:08', end: '12:41', loc_s: 'SIRA', loc_e: 'SIRA', gt: 'LUN - VEN' }] };
+  assert.match(buildOrariReport({ developments }), /sviluppi con tratti sovrapposti: nessuno/);
+});

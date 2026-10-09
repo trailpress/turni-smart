@@ -1,5 +1,6 @@
 import { DEPOT_CODE, getServiceTypes, normalizePlace } from './depotReturns.js';
 import { isRientriKey, isUsciteKey } from '../parserRientri.js';
+import { timeToMinutes } from './timeUtils.js';
 
 /**
  * Un referto su cosa il parser ha capito degli Orari caricati.
@@ -167,6 +168,39 @@ export function compareReturnsAndExits(developments = {}) {
     .sort((a, b) => b.exits - b.returns - (a.exits - a.returns));
 }
 
+/* Gli sviluppi in cui due tratti dello stesso tipo di servizio si sovrappongono
+   nel tempo: una persona non guida due tratti insieme, quindi sotto quel turno
+   ci sono righe di altri turni. E' il segno del difetto «lo sviluppo mischia
+   turni» e dice, per ogni riga, la vettura e la ripresa (#) con cui e' stata
+   letta - il solo modo di capire da dove arrivi senza avere il PDF in mano. */
+export function findMixedDevelopments(developments = {}) {
+  const mixed = [];
+
+  Object.entries(developments || {}).forEach(([key, segments]) => {
+    if (isRientriKey(key) || isUsciteKey(key) || !Array.isArray(segments)) return;
+    const byGt = new Map();
+    segments.forEach((segment) => {
+      const gt = String(segment?.gt ?? '');
+      byGt.set(gt, [...(byGt.get(gt) || []), segment]);
+    });
+    byGt.forEach((items, gt) => {
+      const sorted = items.slice().sort((a, b) => timeToMinutes(a.start) - timeToMinutes(b.start));
+      const overlap = sorted.some((segment, index) => {
+        if (!index) return false;
+        const previous = sorted[index - 1];
+        const previousStart = timeToMinutes(previous.start);
+        const previousEnd = timeToMinutes(previous.end);
+        const start = timeToMinutes(segment.start);
+        return previousEnd >= previousStart && start >= previousStart && start < previousEnd;
+      });
+      if (overlap) mixed.push({ key, gt, segments: sorted });
+    });
+  });
+
+  return mixed;
+}
+
+const MAX_MIXED = 12;
 const MAX_RUNS = 24;
 // Quanti orari di rientro mostrare per linea prima di riassumere.
 const MAX_TIMES = 14;
@@ -230,6 +264,21 @@ export function buildOrariReport({ developments = {}, pages = null } = {}) {
     squilibri.forEach((item) => {
       lines.push(`  ${item.name} · rientri ${item.returns} · uscite ${item.exits}`);
     });
+  }
+
+  const mixed = findMixedDevelopments(developments);
+  lines.push('--');
+  if (!mixed.length) {
+    lines.push('sviluppi con tratti sovrapposti: nessuno');
+  } else {
+    lines.push(`sviluppi con tratti sovrapposti: ${mixed.length}`);
+    mixed.slice(0, MAX_MIXED).forEach((item) => {
+      const shown = item.segments
+        .map((segment) => `${segment.start}-${segment.end} ${segment.loc_s}>${segment.loc_e} v${segment.vett || '?'} #${segment.run_id ?? '-'}`)
+        .join(' | ');
+      lines.push(`  ${item.key} "${item.gt}": ${shown}`);
+    });
+    if (mixed.length > MAX_MIXED) lines.push(`  … altri ${mixed.length - MAX_MIXED}`);
   }
 
   /* Le pagine che hanno i marcatori del grafico ma non ne hanno ricavato tutto.
