@@ -219,6 +219,67 @@ function detectGt(text, previousGt = '') {
   return { gt: gt || previousGt, ver: '' };
 }
 
+/* Due tratti dello stesso conducente non si sovrappongono: se il secondo parte
+   mentre il primo e' ancora in corso, uno dei due e' di un altro turno. Un
+   tratto che attraversa la mezzanotte (fine prima dell'inizio) non si
+   confronta, perche' il testo non dice a quale giorno appartiene. */
+function overlapsInTime(first, second) {
+  const firstStart = timeToMinutes(first.start);
+  const firstEnd = timeToMinutes(first.end);
+  const secondStart = timeToMinutes(second.start);
+  if (firstEnd < firstStart) return false;
+  return secondStart >= firstStart && secondStart < firstEnd;
+}
+
+function hasOverlap(sortedSegments) {
+  return sortedSegments.some((segment, index) => index > 0 && overlapsInTime(sortedSegments[index - 1], segment));
+}
+
+/* Tiene i tratti che possono stare nello stesso turno e scarta quelli che si
+   sovrappongono a uno gia' tenuto. Non aggiunge niente: al piu' lo sviluppo
+   resta incompleto, mai mescolato con quello di un altro turno. */
+function dropOverlaps(sortedSegments) {
+  const kept = [];
+  sortedSegments.forEach((segment) => {
+    const last = kept[kept.length - 1];
+    if (last && overlapsInTime(last, segment)) return;
+    kept.push(segment);
+  });
+  return kept;
+}
+
+/* Quando il codice del turno non si legge davanti alla riga, il tratto si
+   attacca al turno che lo precede nel testo: due turni diversi finiscono nello
+   stesso sviluppo. Il segno e' che i tratti si sovrappongono nel tempo. Li si
+   separa in riprese distinte, cosi' chi sceglie lo sviluppo non li mescola.
+   Si fa a lettura finita perche' i due parser aggiungono in ordini diversi. */
+function separateOverlappingRuns(developments) {
+  Object.entries(developments).forEach(([key, segments]) => {
+    if (isGraphicKey(key)) return;
+    const byRun = new Map();
+    segments.forEach((segment) => {
+      const run = segment.run_id === undefined ? '_' : String(segment.run_id);
+      byRun.set(run, [...(byRun.get(run) || []), segment]);
+    });
+    let nextRun = Math.max(0, ...segments.map((segment) => Number(segment.run_id) || 0)) + 1;
+    byRun.forEach((group) => {
+      if (!hasOverlap(sortSegments(group))) return;
+      const lanes = [];
+      sortSegments(group).forEach((segment) => {
+        const lane = lanes.find((items) => !overlapsInTime(items[items.length - 1], segment));
+        if (lane) lane.push(segment);
+        else lanes.push([segment]);
+      });
+      lanes.slice(1).forEach((lane) => {
+        lane.forEach((segment) => {
+          segment.run_id = nextRun;
+        });
+        nextRun += 1;
+      });
+    });
+  });
+}
+
 function addSegment(developments, code, segment) {
   developments[code] = developments[code] || [];
   const exists = developments[code].some(
@@ -304,7 +365,6 @@ export function parseOrariPageLines(text, gt, ver, developments, tableState = nu
       runCounters[normalizedCode] = (runCounters[normalizedCode] || 0) + 1;
       currentRunByCode[normalizedCode] = runCounters[normalizedCode];
     }
-
     segment.run_id = currentRunByCode[normalizedCode];
     segment.turnoVettura = segment.vett || normalizedCode;
     addSegment(developments, normalizedCode, segment);
@@ -455,6 +515,7 @@ export function parseOrari(pagesText, { diagnostics = null, places = null } = {}
     }
   });
 
+  separateOverlappingRuns(developments);
   return developments;
 }
 
@@ -832,14 +893,20 @@ function buildCommunicatedSegment(preShift) {
   ];
 }
 
-export function getDevSegments(developments, line, shiftNumber, date, preShift = null) {
+function resolveDevSegments(developments, line, shiftNumber, date, preShift) {
   const keys = buildDevKeyVariants(line, shiftNumber);
   const matchedKey = keys.find((key) => developments?.[key]?.length);
   const allSegments = matchedKey ? developments[matchedKey] : [];
   const filtered = allSegments.filter((segment) => matchesServiceDay(segment.gt, date));
   const candidates = allSegments.length ? pickRun(filtered.length ? filtered : allSegments, preShift) : [];
-  const sortedCandidates = sortSegments(candidates);
-  if (coversPreShift(sortedCandidates, preShift) || shouldKeepFullDevelopment(sortedCandidates, preShift)) return sortedCandidates;
+  const sortedAll = sortSegments(candidates);
+  /* Le letture salvate prima della correzione del parser hanno gia' i tratti
+     di piu' turni nello stesso sviluppo. Con una sovrapposizione la scorciatoia
+     "tieni tutto" non vale: si riparte da quelli compatibili e, se non
+     arrivano a fine turno, si ricostruisce dagli estremi della preconoscenza. */
+  const mixed = hasOverlap(sortedAll);
+  const sortedCandidates = mixed ? dropOverlaps(sortedAll) : sortedAll;
+  if (coversPreShift(sortedCandidates, preShift) || (!mixed && shouldKeepFullDevelopment(sortedCandidates, preShift))) return sortedCandidates;
 
   const exactPath = findExactShiftPath(developments, line, date, preShift);
   if (exactPath.length) return sortSegments(exactPath);
@@ -856,6 +923,11 @@ export function getDevSegments(developments, line, shiftNumber, date, preShift =
 
   if (sortedCandidates.length) return sortedCandidates;
   return buildCommunicatedSegment(preShift);
+}
+
+export function getDevSegments(developments, line, shiftNumber, date, preShift = null) {
+  const resolved = resolveDevSegments(developments, line, shiftNumber, date, preShift);
+  return hasOverlap(resolved) ? dropOverlaps(resolved) : resolved;
 }
 
 export function summarizeDevelopments(developments) {
