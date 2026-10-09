@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 17 settembre 2026 · 255 test verdi · issue aperte: #63, #64*
+*Aggiornato: 9 ottobre 2026 · 260 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -28,6 +28,7 @@ ferma dopo aver speso tutto il giro di avvio. E' gia' successo.
 | Uscite dal deposito (#62) | sessione del 21 agosto | chiusa |
 | BusRadar dentro l'app | altra conversazione (PR #60) | ultima attivita' 14 agosto |
 | Documentazione e processo | sessione del 21 agosto | chiusa |
+| Sviluppo turno mescolato, dipendenze | sessione del 9 ottobre | chiusa |
 
 Chi apre una sessione nuova aggiunge la sua riga **prima** di toccare il codice,
 e la toglie quando ha finito. Vedi `decisioni/0006`.
@@ -62,6 +63,16 @@ dal grafico di servizio (`Esce` → `I.L.`), come i rientri. Ogni scheda dice
 l'ora di uscita, l'ora di ingresso in linea e **quanti minuti ci mette**: sono
 quelli della tabella dei tempi, non le ore di una ripresa. Senza quella pagina
 lo dicono, invece di arrangiarsi.
+
+**Sviluppo turno** — i tratti che si sovrappongono nel tempo non stanno nello
+stesso turno: una persona non guida due tratti insieme. Quando il codice del
+turno non si legge davanti alla riga, il tratto si attacca al turno che lo
+precede nel testo e due turni finiscono sotto la stessa chiave (visto il 9
+ottobre sul turno 056 della linea 56: vetture 14, 13, 14 e 9, tre tratti
+accavallati). Il parser li separa in riprese distinte a lettura finita, e
+`getDevSegments` scarta le sovrapposizioni anche nelle letture gia' salvate, che
+non serve ricaricare. **La causa e' dedotta da un testo sintetico, non dal PDF
+vero** (→ domande in attesa).
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 
@@ -146,6 +157,10 @@ Cose vere ma che nessuno ha mai lamentato. Se danno fastidio, diventano issue.
   `GERBIDO_LINES` e non ce l'ho messa.
 - Piazza Massaua: codice di quattro lettere, e quale palina per quale senso
   ([#63](https://github.com/trailpress/turni-smart/issues/63)).
+- **Lo sviluppo del turno 056 (9 ottobre) torna a posto?** Controllare sul
+  telefono; se il turno compare ancora incompleto (si ferma prima della fine
+  dichiarata dalla preconoscenza) serve il referto `?diag=orari` per vedere cosa
+  c'e' sotto la chiave `56 56` e capire quale riga perde il codice.
 - **«Non riporta esattamente le linee che stanno rientrando»**, il 17
   settembre - dopo che la correzione dello stesso giorno (i rientri persi per
   strada, vedi sopra) era gia' stata pubblicata. Non riprodotto: serve un
