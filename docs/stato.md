@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 9 ottobre 2026 · 262 test verdi · issue aperte: #63, #64*
+*Aggiornato: 9 ottobre 2026 · 265 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -72,10 +72,14 @@ ottobre sul turno 056 della linea 56: vetture 14, 13, 14 e 9, tre tratti
 accavallati). Il parser li separa in riprese distinte a lettura finita, e
 `getDevSegments` scarta le sovrapposizioni anche nelle letture gia' salvate, che
 non serve ricaricare. Il referto `?diag=orari` elenca gli sviluppi con tratti
-sovrapposti, con vettura e ripresa di ogni riga. **Il 9 ottobre, turno 056, lo
-sviluppo resta sbagliato**: il parser, provato su una pagina ricostruita dallo
-screenshot del PDF, lo legge giusto (11:08-13:37 e 14:58-18:23), quindi la causa
-sta nel testo vero del PDF o in una lettura salvata. Da leggere nel referto. **La causa e' dedotta da un testo sintetico, non dal PDF
+sovrapposti, con vettura e ripresa di ogni riga. **Causa vera, dal referto del 9 ottobre:** nel PDF
+l'etichetta del turno («56 301») e' disegnata piu' in alto della sua riga, quindi
+nel testo estratto sta sulla riga dell'ultimo tratto del turno prima, e ogni
+riga di continuazione passa al turno dopo. `realignTurnLabels` rimette le
+etichette sulle loro righe, ma solo se per ogni turno della pagina il «tempo
+netto di guida» e' la somma delle durate dei tratti: senza quella prova il testo
+non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
+Orari.** **La causa e' dedotta da un testo sintetico, non dal PDF
 vero** (→ domande in attesa).
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).

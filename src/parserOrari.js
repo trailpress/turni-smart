@@ -248,6 +248,80 @@ function dropOverlaps(sortedSegments) {
   return kept;
 }
 
+const LABEL_ROW_RE = /^([A-Z0-9()]+)\s+(\d{1,3})\s+(.+)$/i;
+const LABEL_ONLY_RE = /^[A-Z0-9()]+\s+\d{1,3}$/i;
+const SEGMENT_START_RE = /^[A-Z0-9()]+\s*\/\s*\d+\s+\d{2}[.:]\d{2}\s/i;
+const SEGMENT_TIMES_RE = /\/\s*\d+\s+(\d{2})[.:](\d{2})\s+[A-Z]{2,4}\s+(?:[AR-]\s+)?(\d{2})[.:](\d{2})\s+[A-Z]{2,4}/i;
+const TOTALS_RE = /(\d{2})[.:](\d{2})\s+\d{2}[.:]\d{2}(?:\s+(?:-+|\d{2}[.:]\d{2}))?\s*$/;
+
+/* Nella pagina dei turni l'etichetta («56 301») puo' essere disegnata piu' in
+   alto della sua riga: nel testo estratto finisce sulla riga dell'ultimo tratto
+   del turno prima, e quel tratto passa al turno sbagliato. Succede su tutte le
+   righe di continuazione, quindi gli sviluppi escono mescolati.
+   La pagina porta con se' la prova: in coda alla prima riga di ogni turno c'e'
+   il «tempo netto di guida», che e' la somma delle durate dei suoi tratti. Le
+   etichette e le prime righe compaiono nello stesso ordine, quindi la n-esima
+   etichetta va sulla n-esima prima riga. Si fa solo se la somma torna per ogni
+   turno della pagina; altrimenti il testo resta com'e'. */
+function realignTurnLabels(text) {
+  const rawLines = String(text || '').split('\n');
+  const rows = rawLines.map((raw) => {
+    const line = raw.trim();
+    const labelMatch = line.match(LABEL_ROW_RE);
+    const labeled = Boolean(labelMatch && SEGMENT_START_RE.test(labelMatch[3]));
+    const labelOnly = !labeled && LABEL_ONLY_RE.test(line);
+    const body = labeled ? labelMatch[3] : labelOnly ? '' : line;
+    const times = body.match(SEGMENT_TIMES_RE);
+    const totals = body.match(TOTALS_RE);
+    return {
+      raw,
+      body,
+      label: labeled ? `${labelMatch[1]} ${labelMatch[2]}` : labelOnly ? line : '',
+      isSegment: SEGMENT_START_RE.test(body),
+      minutes: times ? (Number(times[3]) * 60 + Number(times[4]) - Number(times[1]) * 60 - Number(times[2]) + 1440) % 1440 : 0,
+      net: totals ? Number(totals[1]) * 60 + Number(totals[2]) : null,
+    };
+  });
+
+  const headers = rows.filter((row) => row.isSegment && row.net !== null);
+  const labels = rows.filter((row) => row.label).map((row) => row.label);
+  if (headers.length < 2 || headers.length !== labels.length) return text;
+
+  /* Ogni turno e' una prima riga con il suo netto e i tratti senza netto che la
+     seguono: la somma delle durate deve tornare, per tutti. */
+  const sums = new Map();
+  let current = null;
+  rows.forEach((row) => {
+    if (!row.isSegment) return;
+    if (row.net !== null) {
+      current = { net: row.net, sum: row.minutes };
+      sums.set(row, current);
+    } else if (current) {
+      current.sum += row.minutes;
+    }
+  });
+  if (![...sums.values()].every((group) => Math.abs(group.sum - group.net) <= 1)) return text;
+
+  let changed = false;
+  const lines = [];
+  let headerIndex = 0;
+  rows.forEach((row) => {
+    if (row.isSegment && row.net !== null) {
+      const label = labels[headerIndex];
+      headerIndex += 1;
+      if (row.label !== label) changed = true;
+      lines.push(`${label} ${row.body}`);
+    } else if (row.label) {
+      changed = true;
+      if (row.body) lines.push(row.body);
+    } else {
+      lines.push(row.raw);
+    }
+  });
+
+  return changed ? lines.join('\n') : text;
+}
+
 /* Quando il codice del turno non si legge davanti alla riga, il tratto si
    attacca al turno che lo precede nel testo: due turni diversi finiscono nello
    stesso sviluppo. Il segno e' che i tratti si sovrappongono nel tempo. Li si
@@ -459,7 +533,8 @@ export function parseOrari(pagesText, { diagnostics = null, places = null } = {}
   let lastGt = '';
   const tableStateByService = {};
 
-  pages.forEach((pageText, index) => {
+  pages.forEach((rawPageText, index) => {
+    const pageText = realignTurnLabels(rawPageText);
     const { gt, ver } = detectGt(pageText, lastGt);
     if (gt) lastGt = gt;
     const resolved = gt || lastGt || 'TUTTI';
