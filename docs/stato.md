@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 9 ottobre 2026 · 262 test verdi · issue aperte: #63, #64*
+*Aggiornato: 9 ottobre 2026 · 265 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -72,11 +72,14 @@ ottobre sul turno 056 della linea 56: vetture 14, 13, 14 e 9, tre tratti
 accavallati). Il parser li separa in riprese distinte a lettura finita, e
 `getDevSegments` scarta le sovrapposizioni anche nelle letture gia' salvate, che
 non serve ricaricare. Il referto `?diag=orari` elenca gli sviluppi con tratti
-sovrapposti, con vettura e ripresa di ogni riga. **Il 9 ottobre, turno 056, lo
-sviluppo resta sbagliato**: il parser, provato su una pagina ricostruita dallo
-screenshot del PDF, lo legge giusto (11:08-13:37 e 14:58-18:23), quindi la causa
-sta nel testo vero del PDF o in una lettura salvata. Da leggere nel referto. **La causa e' dedotta da un testo sintetico, non dal PDF
-vero** (→ domande in attesa).
+sovrapposti, con vettura e ripresa di ogni riga. **Causa vera, dal referto del 9 ottobre:** nel PDF
+l'etichetta del turno («56 301») e' disegnata piu' in alto della sua riga, quindi
+nel testo estratto sta sulla riga dell'ultimo tratto del turno prima, e ogni
+riga di continuazione passa al turno dopo. `realignTurnLabels` rimette le
+etichette sulle loro righe, ma solo se per ogni turno della pagina il «tempo
+netto di guida» e' la somma delle durate dei tratti: senza quella prova il testo
+non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
+Orari.**
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 
@@ -161,10 +164,9 @@ Cose vere ma che nessuno ha mai lamentato. Se danno fastidio, diventano issue.
   `GERBIDO_LINES` e non ce l'ho messa.
 - Piazza Massaua: codice di quattro lettere, e quale palina per quale senso
   ([#63](https://github.com/trailpress/turni-smart/issues/63)).
-- **Lo sviluppo del turno 056 (9 ottobre) torna a posto?** Controllare sul
-  telefono; se il turno compare ancora incompleto (si ferma prima della fine
-  dichiarata dalla preconoscenza) serve il referto `?diag=orari` per vedere cosa
-  c'e' sotto la chiave `56 56` e capire quale riga perde il codice.
+- **Lo sviluppo del turno 056 (9 ottobre) torna a posto** dopo aver ricaricato il
+  PDF Orari? Se no, serve un referto `?diag=orari` fresco: la sezione «sviluppi
+  con tratti sovrapposti» dice quali righe restano mescolate.
 - **«Non riporta esattamente le linee che stanno rientrando»**, il 17
   settembre - dopo che la correzione dello stesso giorno (i rientri persi per
   strada, vedi sopra) era gia' stata pubblicata. Non riprodotto: serve un
