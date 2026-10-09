@@ -79,8 +79,7 @@ riga di continuazione passa al turno dopo. `realignTurnLabels` rimette le
 etichette sulle loro righe, ma solo se per ogni turno della pagina il «tempo
 netto di guida» e' la somma delle durate dei tratti: senza quella prova il testo
 non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
-Orari.** **La causa e' dedotta da un testo sintetico, non dal PDF
-vero** (→ domande in attesa).
+Orari.**
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 
@@ -165,10 +164,9 @@ Cose vere ma che nessuno ha mai lamentato. Se danno fastidio, diventano issue.
   `GERBIDO_LINES` e non ce l'ho messa.
 - Piazza Massaua: codice di quattro lettere, e quale palina per quale senso
   ([#63](https://github.com/trailpress/turni-smart/issues/63)).
-- **Lo sviluppo del turno 056 (9 ottobre) torna a posto?** Controllare sul
-  telefono; se il turno compare ancora incompleto (si ferma prima della fine
-  dichiarata dalla preconoscenza) serve il referto `?diag=orari` per vedere cosa
-  c'e' sotto la chiave `56 56` e capire quale riga perde il codice.
+- **Lo sviluppo del turno 056 (9 ottobre) torna a posto** dopo aver ricaricato il
+  PDF Orari? Se no, serve un referto `?diag=orari` fresco: la sezione «sviluppi
+  con tratti sovrapposti» dice quali righe restano mescolate.
 - **«Non riporta esattamente le linee che stanno rientrando»**, il 17
   settembre - dopo che la correzione dello stesso giorno (i rientri persi per
   strada, vedi sopra) era gia' stata pubblicata. Non riprodotto: serve un
