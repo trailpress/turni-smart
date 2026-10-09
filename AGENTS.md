@@ -74,6 +74,13 @@ Ramo `claude/<descrizione>` → implementa con test → verifica in un browser v
 → `npm run check` → PR → merge in squash. Il deploy Pages parte da solo sul push
 a `main`.
 
+**Dopo l'ok dell'utente, in automatico.** L'utente prova la modifica in locale:
+quando dice che va bene, **commit, push e PR si fanno subito, senza richiedere
+altra conferma**, e a fine lavoro il ramo locale, quello remoto e la PR devono
+coincidere, con `docs/stato.md` aggiornato. Vale per qualunque agente, Codex
+compreso. Prima dell'ok non si apre nessuna PR. Il merge resta all'utente. Non
+si segue la PR con una sottoscrizione agli eventi: ogni risveglio costa token.
+
 I dettagli — conflitti di merge, Playwright, coordinamento fra piu'
 conversazioni — stanno in [`docs/procedura.md`](docs/procedura.md).
 
