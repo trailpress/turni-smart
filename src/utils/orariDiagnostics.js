@@ -200,6 +200,27 @@ export function findMixedDevelopments(developments = {}) {
   return mixed;
 }
 
+const EXCERPT_LINES = 16;
+
+/** Le righe grezze della prima pagina che contiene gli orari dei primi tratti
+ *  di uno sviluppo, con due righe di contesto prima. */
+export function rawExcerpt(pages = [], item = null) {
+  const times = (item?.segments || [])
+    .slice(0, 2)
+    .flatMap((segment) => [segment.start, segment.end])
+    .filter(Boolean);
+  if (!times.length) return [];
+
+  const has = (text, time) => text.includes(time) || text.includes(time.replace(':', '.'));
+  const page = pages.find((entry) => typeof entry.text === 'string' && times.every((time) => has(entry.text, time)));
+  if (!page) return [];
+
+  const rows = page.text.split('\n');
+  const first = rows.findIndex((row) => has(row, times[0]));
+  const from = Math.max(0, first - 2);
+  return rows.slice(from, from + EXCERPT_LINES).map((row) => row.trim().slice(0, 150));
+}
+
 const MAX_MIXED = 12;
 const MAX_RUNS = 24;
 // Quanti orari di rientro mostrare per linea prima di riassumere.
@@ -288,6 +309,20 @@ export function buildOrariReport({ developments = {}, pages = null } = {}) {
       lines.push(`  ${item.key} "${item.gt}": ${shown}`);
     });
     if (mixed.length > MAX_MIXED) lines.push(`  … altri ${mixed.length - MAX_MIXED}`);
+  }
+
+  /* Il testo grezzo della pagina dove sta il primo sviluppo mescolato, cosi' com'
+     e' uscito dal PDF: e' il solo modo di vedere in che forma il telefono lo
+     estrae davvero, e quindi perche' le righe finiscono sotto il turno
+     sbagliato. Si preferisce una linea del Gerbido, la 56. */
+  if (mixed.length && pages?.length) {
+    const target = mixed.find((item) => /^56 /.test(item.key)) || mixed[0];
+    const excerpt = rawExcerpt(pages, target);
+    if (excerpt.length) {
+      lines.push('--');
+      lines.push(`testo grezzo vicino a ${target.key}:`);
+      excerpt.forEach((line) => lines.push(`  | ${line}`));
+    }
   }
 
   /* Le pagine che hanno i marcatori del grafico ma non ne hanno ricavato tutto.
