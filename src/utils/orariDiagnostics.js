@@ -218,6 +218,15 @@ export function buildOrariReport({ developments = {}, pages = null } = {}) {
       lines.push(`${range} "${run.gt}" [${run.service}] ric ${run.recognized}/${run.pages}`);
     });
     if (summary.runs.length > MAX_RUNS) lines.push(`… altre ${summary.runs.length - MAX_RUNS} tratte`);
+    /* Dice che questa versione dell'app ha la correzione delle etichette dei
+       turni e quante pagine ne hanno avuto bisogno: se la riga manca, il
+       referto viene da una versione vecchia. */
+    const realigned = pages.filter((page) => page.realigned).map((page) => page.page);
+    lines.push(
+      realigned.length
+        ? `etichette dei turni riallineate su ${realigned.length} pagine (p${realigned.slice(0, 12).join(' p')}${realigned.length > 12 ? ' …' : ''})`
+        : 'etichette dei turni riallineate: nessuna pagina',
+    );
   } else {
     lines.push('pagine: non disponibili (ricarica il PDF Orari con la diagnostica attiva)');
   }
