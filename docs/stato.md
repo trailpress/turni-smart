@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 10 ottobre 2026 · 266 test verdi · issue aperte: #63, #64*
+*Aggiornato: 10 ottobre 2026 · 267 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 

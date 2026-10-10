@@ -234,3 +234,13 @@ test('il referto dice su quante pagine le etichette dei turni sono state riallin
   assert.match(report, /etichette dei turni riallineate su 1 pagine \(p2\)/);
   assert.match(buildOrariReport({ developments, pages: [{ gt: 'LUN - VEN', own: 'LUN - VEN', page: 1 }] }), /riallineate: nessuna pagina/);
 });
+
+test('il referto mostra il testo grezzo vicino al primo sviluppo mescolato', () => {
+  const seg = (start, end, vett, run_id) => ({ start, end, loc_s: 'SIRA', loc_e: 'SIRA', vett, run_id, gt: 'LUN - VEN' });
+  const developments = { '56 56': [seg('11:08', '13:37', '13', 4), seg('11:56', '13:49', '14', 9)] };
+  const text = 'DEPOSITO GERBIDO\n56 056\n56 / 13 11.08 SIRA R 13.37 SIRA 05.54 05.54 -----\n56 / 14 11.56 SIRA A 13.49 SIRA';
+  const report = buildOrariReport({ developments, pages: [{ gt: 'LUN - VEN', own: 'LUN - VEN', page: 1, text }] });
+
+  assert.match(report, /testo grezzo vicino a 56 56:/);
+  assert.match(report, /\| 56 \/ 13 11\.08 SIRA R 13\.37 SIRA 05\.54 05\.54 -----/);
+});

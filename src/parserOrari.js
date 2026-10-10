@@ -543,7 +543,7 @@ export function parseOrari(pagesText, { diagnostics = null, places = null } = {}
       /* Cosa la pagina dice di se', senza eredita': quando e' vuoto la pagina
          non e' stata riconosciuta e sta prendendo il tipo da quella prima. */
       const own = detectGt(pageText, '');
-      diagnostics.push({ gt: resolved, own: own.gt, page: index + 1, ver: own.ver, realigned: pageText !== rawPageText });
+      diagnostics.push({ gt: resolved, own: own.gt, page: index + 1, ver: own.ver, realigned: pageText !== rawPageText, text: rawPageText });
     }
 
     const serviceKey = `${resolved}|${ver || ''}`;
