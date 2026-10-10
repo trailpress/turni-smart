@@ -224,3 +224,13 @@ test('senza sovrapposizioni il referto lo dice', () => {
   const developments = { '56 58': [{ start: '08:08', end: '12:41', loc_s: 'SIRA', loc_e: 'SIRA', gt: 'LUN - VEN' }] };
   assert.match(buildOrariReport({ developments }), /sviluppi con tratti sovrapposti: nessuno/);
 });
+
+test('il referto dice su quante pagine le etichette dei turni sono state riallineate', () => {
+  const alte = '56 003\n56 / 3 05.02 GERB - 09.29 SIRA 07.00 07.00 -----\n56 005 56 / 9 12.55 SIRA R 15.28 SIRA\n56 / 5 05.19 GERB - 10.15 GERB 06.51 06.51 -----\n56 / 6 13.03 SIRA A 14.58 SIRA';
+  const diagnostics = [];
+  const developments = parseOrari(['GTT gruppo 56 - LUN - VEN - Versione B06\n05 101 5 / 1 04.48 GERB - 10.15 CATT', 'GTT gruppo 56 - LUN - VEN - Versione B06\n' + alte], { diagnostics });
+  const report = buildOrariReport({ developments, pages: diagnostics });
+
+  assert.match(report, /etichette dei turni riallineate su 1 pagine \(p2\)/);
+  assert.match(buildOrariReport({ developments, pages: [{ gt: 'LUN - VEN', own: 'LUN - VEN', page: 1 }] }), /riallineate: nessuna pagina/);
+});
