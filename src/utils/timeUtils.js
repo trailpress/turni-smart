@@ -27,14 +27,20 @@ export function formatMinutes(minutes) {
   return remaining ? `${hours}h ${remaining}m` : `${hours}h`;
 }
 
-/* Oltre due giorni di distanza fra un turno e l'altro in mezzo ci sono dei
-   riposi: non e' piu' un "riposo tra i turni", e il numero non dice niente. */
-const MAX_REST_SHOWN = 48 * 60;
+/* Quanto passa fra due turni, per la card. Oltre due giorni si conta a giorni:
+   «72h» si legge peggio di «3g». */
+export function formatRestValue(minutes) {
+  if (!minutes || minutes <= 0) return '';
+  if (minutes < 48 * 60) return formatMinutes(minutes);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  return hours ? `${days}g ${hours}h` : `${days}g`;
+}
 
 /** Quanto passa dalla fine di un turno all'inizio del successivo, per la card. */
 export function formatRestBetweenShifts(minutes) {
-  if (!minutes || minutes <= 0 || minutes >= MAX_REST_SHOWN) return '';
-  return `${formatMinutes(minutes)} dal turno prima`;
+  const value = formatRestValue(minutes);
+  return value ? `${value} dal turno prima` : '';
 }
 
 export function segmentCrossesMidnight(segment) {

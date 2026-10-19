@@ -595,6 +595,7 @@ export default function App() {
   const [suspendedShiftText, setSuspendedShiftText] = useState('');
   const [suspendedShiftError, setSuspendedShiftError] = useState('');
   const [manualEntryOpen, setManualEntryOpen] = useState(false);
+  const manualEntryRef = useRef(null);
   const manualEntryDate =
     selectedDate instanceof Date && !Number.isNaN(selectedDate.getTime()) ? selectedDate : new Date();
 
@@ -874,6 +875,21 @@ export default function App() {
     setActiveSection('oggi');
   }
 
+  /* Un cambio turno senza passare dall'eliminazione: il turno vecchio resta
+     dov'e' finche' quello nuovo non viene inserito, e l'inserimento si apre gia'
+     su questo giorno. */
+  function replaceShift(day) {
+    const iso = day?.iso;
+    if (!iso || !days[iso]) return;
+    const date = day.date || new Date(`${iso}T00:00:00`);
+    setSelectedDate(date);
+    setSearchResults([day]);
+    setSearchMessage(`Stai sostituendo il turno del ${dateFormatter.format(date)}. Incolla qui sotto quello nuovo: prende il suo posto.`);
+    setManualEntryOpen(true);
+    setActiveSection('oggi');
+    requestAnimationFrame(() => manualEntryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' }));
+  }
+
   function insertSuspendedShift() {
     setSuspendedShiftError('');
     const fallbackDate = manualEntryDate;
@@ -1048,6 +1064,7 @@ export default function App() {
         calendarActions={(dayForExport) => buildCalendarActions([dayForExport], `turno-${dayForExport?.iso || 'turno'}.ics`)}
         onAssignTurn={applyCommunicatedShift}
         onRemoveShift={removeShift}
+        onReplaceShift={replaceShift}
         shift={shift}
       />
     );
@@ -1454,6 +1471,7 @@ export default function App() {
 
               <details
                 className="suspended-shift-disclosure"
+                ref={manualEntryRef}
                 onToggle={(event) => setManualEntryOpen(event.currentTarget.open)}
                 open={manualEntryOpen}
               >

@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 19 ottobre 2026 · 273 test verdi · issue aperte: #63, #64*
+*Aggiornato: 19 ottobre 2026 · 275 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -81,20 +81,23 @@ netto di guida» e' la somma delle durate dei tratti: senza quella prova il test
 non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
 Orari.**
 
-**Riposo fra i turni** — ogni turno dice quanto passa dalla fine del turno prima
-all'inizio suo («4h dal turno prima»), sulla card e nella vista Periodo. Tre
-livelli: neutro, **arancione «Pomeriggio → mattina»** (il turno prima finisce
-dalle 16:00 in poi o dopo mezzanotte, il giorno dopo attacca prima di
-mezzogiorno - anche con piu' di undici ore di riposo), **rosso** sotto le undici
-ore. Le due soglie (16:00 e 12:00) sono di evidenza, non dell'Accordo: stanno in
-`analytics.js`. Oltre due giorni di distanza (in mezzo ci sono dei riposi) il
-numero non si mostra. Il calcolo c'era gia' (`restMinutes`): prima si vedeva
-solo sotto le undici ore.
+**Card del turno: durata, attacchi tra, intervallo** — tre riquadri con la loro
+etichetta su ogni card di turno: **Durata** (dalla preconoscenza, o dagli orari
+di attacco e fine), **Attacchi tra** (vivo nelle ultime ore, poi ore e minuti,
+oltre 48 ore a giorni; «In servizio» e «Finito» a turno cominciato), **Dal turno
+precedente** (quanto passa dalla fine del turno prima: ore e minuti, a giorni
+oltre 48 ore, anche dopo dei riposi). Il terzo e' neutro, **arancione** se il
+turno prima finisce dalle 16:00 in poi o dopo mezzanotte e il giorno dopo si
+attacca prima di mezzogiorno (anche con piu' di undici ore), **rosso** sotto le
+undici ore. Le due soglie (16:00 e 12:00) sono di evidenza, non dell'Accordo:
+stanno in `analytics.js`. Stessa evidenza nella vista Periodo.
 
-**Cambio turno** — dalla card del turno, «Altre azioni» → **Elimina turno**: dopo
-la conferma il giorno esce dal periodo in uso e dalla copia salvata del mese, e
-si apre l'inserimento del turno comunicato sulla stessa data. Ricaricare il PDF
-riporta il turno com'era. Non si puo' eliminare l'unico giorno caricato.
+**Cambio turno** — su ogni card di turno, anche quella che viene dal PDF,
+«Altre azioni» → **Sostituisci turno** (apre l'inserimento del turno comunicato
+su quel giorno; il vecchio resta finche' il nuovo non e' inserito) oppure
+**Elimina turno** (dopo conferma il giorno esce dal periodo e dalla copia salvata
+del mese). Ricaricare il PDF riporta i turni com'erano. Non si elimina l'unico
+giorno caricato.
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 

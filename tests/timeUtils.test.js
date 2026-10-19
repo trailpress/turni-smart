@@ -16,11 +16,12 @@ test('formatta una durata operativa', () => {
   assert.equal(formatMinutes(410), '6h 50m');
 });
 
-test('il riposo fra due turni si scrive in ore e minuti, e sparisce quando in mezzo ci sono i riposi', () => {
+test('il riposo fra due turni si scrive in ore e minuti, e oltre due giorni si conta a giorni', () => {
   assert.equal(formatRestBetweenShifts(240), '4h dal turno prima');
   assert.equal(formatRestBetweenShifts(605), '10h 5m dal turno prima');
   assert.equal(formatRestBetweenShifts(60 * 30), '30h dal turno prima');
-  assert.equal(formatRestBetweenShifts(60 * 72), '');
+  assert.equal(formatRestBetweenShifts(60 * 72), '3g dal turno prima');
+  assert.equal(formatRestBetweenShifts(60 * 50), '2g 2h dal turno prima');
   assert.equal(formatRestBetweenShifts(null), '');
   assert.equal(formatRestBetweenShifts(0), '');
 });

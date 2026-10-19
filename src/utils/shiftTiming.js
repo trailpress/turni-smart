@@ -27,6 +27,32 @@ export function shiftStartDate(day) {
   return start;
 }
 
+export function shiftEndDate(day) {
+  const start = shiftStartDate(day);
+  if (!start || !day.e) return null;
+  const end = new Date(start);
+  end.setHours(0, 0, 0, 0);
+  end.setMinutes(compactTimeToMinutes(day.e));
+  if (end <= start) end.setDate(end.getDate() + 1);
+  return end;
+}
+
+/** La durata dagli orari di attacco e di fine, quando la preconoscenza non la porta. */
+export function shiftSpanMinutes(day) {
+  const start = shiftStartDate(day);
+  const end = shiftEndDate(day);
+  return start && end ? Math.round((end - start) / 60000) : null;
+}
+
+/** «Attacchi tra» anche quando manca piu' di un giorno o due: oltre le 48 ore a giorni. */
+export function formatDistantCountdown(minutes) {
+  if (!Number.isFinite(minutes) || minutes < 0) return '';
+  if (minutes < 48 * 60) return formatCountdown(minutes);
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  return hours ? `${days}g ${hours}h` : `${days}g`;
+}
+
 export function formatCountdown(minutes) {
   if (!Number.isFinite(minutes) || minutes < 0) return '';
   if (minutes < 60) return `${minutes} min`;
