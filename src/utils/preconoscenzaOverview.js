@@ -153,6 +153,8 @@ function buildShiftRow(day, enrichment) {
     isEvening: Boolean(enrichment?.isEvening ?? category.isEvening),
     isShortRest: Boolean(enrichment?.isShortRest),
     restLabel: formatRestBetweenShifts(enrichment?.restMinutes),
+    isAfternoonToMorning: Boolean(enrichment?.isAfternoonToMorning),
+    restNote: enrichment?.isAfternoonToMorning && enrichment?.previousEnd ? `Prima finisci alle ${enrichment.previousEnd}` : '',
     hasDevelopment: segments.length > 0,
     blocks: buildTimelineBlocks(intervals),
   };

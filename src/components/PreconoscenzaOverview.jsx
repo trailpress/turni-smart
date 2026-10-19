@@ -100,12 +100,20 @@ function OverviewDay({ row, onSelectDay }) {
             {showSplitTag ? <i className="overview-tag overview-tag--split">2 riprese</i> : null}
             {row.isEvening ? <i className="overview-tag overview-tag--evening">Serale</i> : null}
             {row.restLabel ? (
-              <i className={`overview-tag ${row.isShortRest ? 'overview-tag--warning' : 'overview-tag--plain'}`}>{row.restLabel}</i>
+              <i
+                className={`overview-tag ${
+                  row.isShortRest ? 'overview-tag--warning' : row.isAfternoonToMorning ? 'overview-tag--late' : 'overview-tag--plain'
+                }`}
+              >
+                {row.isAfternoonToMorning ? 'Pomeriggio → mattina · ' : ''}
+                {row.restLabel}
+              </i>
             ) : row.isShortRest ? (
               <i className="overview-tag overview-tag--warning">Riposo breve</i>
             ) : null}
           </span>
           {row.note ? <small>{row.note}</small> : null}
+          {row.restNote ? <small>{row.restNote}</small> : null}
         </span>
 
         <span className="overview-day__time">

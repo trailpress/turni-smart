@@ -1970,6 +1970,17 @@ select:focus-visible {
   color: #fff;
 }
 
+.shift-badge--late {
+  background: #e65100;
+  color: #fff;
+}
+
+.shift-rest-note {
+  margin: 6px 0 0;
+  font-weight: 700;
+  color: #ffb74d;
+}
+
 .shift-route {
   display: grid;
   grid-template-columns: minmax(118px, max-content) minmax(0, 1fr) minmax(118px, max-content);
@@ -4885,6 +4896,12 @@ a.inline-action--gtt {
   border-color: rgba(150, 96, 220, 0.6);
   background: rgba(120, 72, 190, 0.34);
   color: #e6d8ff;
+}
+
+.overview-tag--late {
+  border-color: #ff9800;
+  background: rgba(230, 81, 0, 0.55);
+  color: #fff;
 }
 
 .overview-tag--warning {

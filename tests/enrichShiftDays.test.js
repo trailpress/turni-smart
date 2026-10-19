@@ -117,3 +117,45 @@ test('fra un turno e il successivo senza riposi in mezzo il numero e quello vero
   assert.equal(entry.restMinutes, 605, 'dalle 20:10 alle 06:15');
   assert.equal(entry.isShortRest, true, 'dieci ore e cinque minuti: meno di undici');
 });
+
+test('dal pomeriggio al mattino dopo si segnala anche con piu di undici ore di riposo', () => {
+  const giorni = {
+    '2026-08-10': giorno('2026-08-10', { t: 'turno', l: '74', n: '308', i: '1226', e: '1700', li: 'CATT', le: 'CATT' }),
+    '2026-08-11': giorno('2026-08-11', { t: 'turno', l: '74', n: '101', i: '0615', e: '1215', li: 'GERB', le: 'GERB' }),
+  };
+  const entry = enrichShiftDays(giorni, {})['2026-08-11'];
+  assert.equal(entry.restMinutes, 795, 'dalle 17:00 alle 06:15');
+  assert.equal(entry.isShortRest, false, 'oltre le undici ore');
+  assert.equal(entry.isAfternoonToMorning, true);
+  assert.equal(entry.previousEnd, '17:00');
+});
+
+test('un turno che finisce dopo mezzanotte e quello del mattino dopo si segnalano', () => {
+  const giorni = {
+    '2026-08-10': giorno('2026-08-10', { t: 'turno', l: '74', n: '403', i: '1630', e: '0100', li: 'CATT', le: 'GERB' }),
+    '2026-08-11': giorno('2026-08-11', { t: 'turno', l: '74', n: '101', i: '0500', e: '1130', li: 'GERB', le: 'GERB' }),
+  };
+  const entry = enrichShiftDays(giorni, {})['2026-08-11'];
+  assert.equal(entry.isAfternoonToMorning, true);
+  assert.equal(entry.previousEnd, '01:00');
+});
+
+test('non si segnala se il turno prima finisce presto, se il dopo non e di mattina, o se in mezzo ci sono riposi', () => {
+  const base = { t: 'turno', l: '74', li: 'CATT', le: 'CATT' };
+  const presto = enrichShiftDays(
+    { '2026-08-10': giorno('2026-08-10', { ...base, n: '201', i: '0800', e: '1500' }), '2026-08-11': giorno('2026-08-11', { ...base, n: '101', i: '0500', e: '1100' }) },
+    {},
+  )['2026-08-11'];
+  const dopoPranzo = enrichShiftDays(
+    { '2026-08-10': giorno('2026-08-10', { ...base, n: '308', i: '1226', e: '2000' }), '2026-08-11': giorno('2026-08-11', { ...base, n: '308', i: '1226', e: '2000' }) },
+    {},
+  )['2026-08-11'];
+  const riposi = enrichShiftDays(
+    { '2026-08-10': giorno('2026-08-10', { ...base, n: '308', i: '1226', e: '2000' }), '2026-08-12': giorno('2026-08-12', { ...base, n: '101', i: '0500', e: '1100' }) },
+    {},
+  )['2026-08-12'];
+
+  assert.equal(presto.isAfternoonToMorning, false, 'finisce alle 15:00');
+  assert.equal(dopoPranzo.isAfternoonToMorning, false, 'attacca alle 12:26');
+  assert.equal(riposi.isAfternoonToMorning, false, 'due giorni dopo');
+});

@@ -361,6 +361,8 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
   const isEvening = Boolean(enrichment?.isEvening ?? shift.isEvening);
   const isShortRest = Boolean(enrichment?.isShortRest ?? shift.isShortRest);
   const restMinutes = enrichment?.restMinutes ?? shift.restMinutes ?? null;
+  const isAfternoonToMorning = Boolean(enrichment?.isAfternoonToMorning);
+  const previousEnd = enrichment?.previousEnd || '';
   const category = enrichment?.category || shift.category;
   const hasSegments = segments.length > 0;
   const legPause = hasMultipleLegs ? minutesBetween(segments[0].end, segments[1].start) : null;
@@ -442,13 +444,23 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
                     non solo quando e' poco: dal pomeriggio tardi al mattino e'
                     il numero che si va a cercare. Sotto le undici ore e' rosso. */}
                 {formatRestBetweenShifts(restMinutes) ? (
-                  <span className={`shift-badge ${isShortRest ? 'shift-badge--rest' : 'shift-badge--category'}`}>
+                  <span
+                    className={`shift-badge ${
+                      isShortRest ? 'shift-badge--rest' : isAfternoonToMorning ? 'shift-badge--late' : 'shift-badge--category'
+                    }`}
+                  >
+                    {isAfternoonToMorning ? 'Pomeriggio → mattina · ' : ''}
                     {formatRestBetweenShifts(restMinutes)}
                   </span>
                 ) : isShortRest ? (
                   <span className="shift-badge shift-badge--rest">Riposo breve</span>
                 ) : null}
               </div>
+              {isAfternoonToMorning && previousEnd ? (
+                <p className="shift-rest-note">
+                  Il turno prima finisce alle {previousEnd}, questo attacca alle {shift.start}.
+                </p>
+              ) : null}
             </div>
 
             <div className="shift-card__body">

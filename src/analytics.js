@@ -3,6 +3,18 @@ import { getDevSegments } from './parserOrari.js';
 import { compactTimeToMinutes, formatMinutes, isEveningFallbackByTime, timeToMinutes } from './utils/timeUtils.js';
 import { getShiftCategory, isEveningShift } from './constants/shiftClassification.js';
 
+/* Dal pomeriggio al mattino dopo. "Tardo pomeriggio" e "mattino" non hanno un
+   numero nell'Accordo: qui sono quattro ore del pomeriggio in poi per chi
+   finisce, e prima di mezzogiorno per chi attacca. Sono due soglie di
+   evidenza, non una regola sul riposo: quello resta le undici ore. */
+const LATE_END_FROM = 16 * 60;
+const MORNING_START_BEFORE = 12 * 60;
+
+function formatClock(minutes) {
+  const day = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(day / 60)).padStart(2, '0')}:${String(day % 60).padStart(2, '0')}`;
+}
+
 function shiftDate(day) {
   return day.date || new Date(`${day.iso}T00:00:00`);
 }
@@ -28,7 +40,7 @@ export function enrichShiftDays(days = {}, developments = {}) {
     .sort()
     .map((iso) => {
       const day = days[iso];
-      if (!day || day.t !== 'turno') return { iso, day, segments: [], isSplit: false, isEvening: false, isShortRest: false, restMinutes: null };
+      if (!day || day.t !== 'turno') return { iso, day, segments: [], isSplit: false, isEvening: false, isShortRest: false, restMinutes: null, previousEnd: '', isAfternoonToMorning: false };
 
       const segments = Array.isArray(day.manualSegments) && day.manualSegments.length
         ? day.manualSegments
@@ -48,6 +60,8 @@ export function enrichShiftDays(days = {}, developments = {}) {
         isEvening: isEveningShift(day.n, isEveningFallbackByTime({ start: day.i, end: day.e, segments })),
         isShortRest: false,
         restMinutes: null,
+        previousEnd: '',
+        isAfternoonToMorning: false,
       };
     });
 
@@ -67,6 +81,17 @@ export function enrichShiftDays(days = {}, developments = {}) {
       const rest = currentStart - previousEnd;
       entry.restMinutes = rest > 0 ? rest : null;
       entry.isShortRest = rest > 0 && rest < 660;
+
+      const previousEndMinutes = shiftEndAbsoluteMinutes(previousWorked.day, previousWorked.segments);
+      const startMinutes = shiftStartMinutes(entry.day, entry.segments);
+      const dayGap = Math.round(
+        (new Date(`${entry.iso}T00:00:00`).getTime() - new Date(`${previousWorked.iso}T00:00:00`).getTime()) / 86400000,
+      );
+      entry.previousEnd = formatClock(previousEndMinutes);
+      /* Un turno che finisce nel pomeriggio avanzato, o dopo mezzanotte, e il
+         giorno dopo uno che attacca di mattina: e' il passaggio che si va a
+         cercare, anche quando le ore di riposo sono piu' di undici. */
+      entry.isAfternoonToMorning = rest > 0 && dayGap === 1 && previousEndMinutes >= LATE_END_FROM && startMinutes < MORNING_START_BEFORE;
     }
 
     previousWorked = entry;
