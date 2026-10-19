@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 10 ottobre 2026 · 267 test verdi · issue aperte: #63, #64*
+*Aggiornato: 19 ottobre 2026 · 270 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -80,6 +80,13 @@ etichette sulle loro righe, ma solo se per ogni turno della pagina il «tempo
 netto di guida» e' la somma delle durate dei tratti: senza quella prova il testo
 non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
 Orari.**
+
+**Riposo fra i turni** — ogni turno dice quanto passa dalla fine del turno prima
+all'inizio suo («4h dal turno prima»), sulla card e nella vista Periodo, in
+rosso sotto le undici ore: il caso che interessa e' il turno che finisce a notte
+fonda e quello che attacca all'alba dopo. Oltre due giorni di distanza (in mezzo
+ci sono dei riposi) il numero non si mostra. Il calcolo c'era gia'
+(`restMinutes`): prima si vedeva solo sotto le undici ore.
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 

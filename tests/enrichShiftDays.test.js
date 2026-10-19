@@ -89,11 +89,31 @@ test('un riposo lungo non viene segnalato e non porta un numero fuorviante', () 
   };
   const entry = enrichShiftDays(giorni, {})['2026-08-11'];
   assert.equal(entry.isShortRest, false);
-  assert.equal(entry.restMinutes, 1526, 'il numero c e comunque, ma non si mostra');
+  assert.equal(entry.restMinutes, 1526, 'il numero ce comunque, e la card lo mostra senza segnarlo come breve');
 });
 
 test('il primo turno del periodo non ha un riposo da misurare', () => {
   const entry = enrichShiftDays({ '2026-08-10': TURNO_308 }, {})['2026-08-10'];
   assert.equal(entry.restMinutes, null);
   assert.equal(entry.isShortRest, false);
+});
+
+test('dal turno del tardo pomeriggio che finisce dopo mezzanotte a quello del mattino', () => {
+  const giorni = {
+    '2026-08-10': giorno('2026-08-10', { t: 'turno', l: '74', n: '403', i: '1630', e: '0100', li: 'CATT', le: 'GERB' }),
+    '2026-08-11': giorno('2026-08-11', { t: 'turno', l: '74', n: '101', i: '0500', e: '1130', li: 'GERB', le: 'GERB' }),
+  };
+  const entry = enrichShiftDays(giorni, {})['2026-08-11'];
+  assert.equal(entry.restMinutes, 240, 'dall\'una di notte alle cinque');
+  assert.equal(entry.isShortRest, true);
+});
+
+test('fra un turno e il successivo senza riposi in mezzo il numero e quello vero', () => {
+  const giorni = {
+    '2026-08-10': giorno('2026-08-10', { t: 'turno', l: '74', n: '308', i: '1226', e: '2010', li: 'CATT', le: 'CATT' }),
+    '2026-08-11': giorno('2026-08-11', { t: 'turno', l: '74', n: '101', i: '0615', e: '1215', li: 'GERB', le: 'GERB' }),
+  };
+  const entry = enrichShiftDays(giorni, {})['2026-08-11'];
+  assert.equal(entry.restMinutes, 605, 'dalle 20:10 alle 06:15');
+  assert.equal(entry.isShortRest, true, 'dieci ore e cinque minuti: meno di undici');
 });

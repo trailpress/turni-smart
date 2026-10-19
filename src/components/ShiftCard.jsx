@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { formatMinutes, minutesBetween } from '../utils/timeUtils.js';
+import { formatMinutes, formatRestBetweenShifts, minutesBetween } from '../utils/timeUtils.js';
 import { getDevSegments } from '../parserOrari.js';
 import { getLineDisplayName } from '../constants/depotGerbido.js';
 import { getChangePointAddress, normalizeChangePoint } from '../constants/changePoints.js';
@@ -438,13 +438,15 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
                 {dayData && !dayData.isGerbidoLine ? <span className="shift-badge shift-badge--rest">Linea non riconosciuta</span> : null}
                 {isSplit ? <span className="shift-badge shift-badge--warning">2 riprese</span> : null}
                 {showEveningBadge ? <span className="shift-badge shift-badge--evening">Serale</span> : null}
-                {/* "Riposo breve" da solo non dice niente: il numero si', ed
-                    e' quello che interessa - quanto si sta a casa fra il turno
-                    prima e questo. */}
-                {isShortRest ? (
-                  <span className="shift-badge shift-badge--rest">
-                    {restMinutes ? `${formatMinutes(restMinutes)} dal turno prima` : 'Riposo breve'}
+                {/* Quanto si sta a casa fra il turno prima e questo, su ogni turno e
+                    non solo quando e' poco: dal pomeriggio tardi al mattino e'
+                    il numero che si va a cercare. Sotto le undici ore e' rosso. */}
+                {formatRestBetweenShifts(restMinutes) ? (
+                  <span className={`shift-badge ${isShortRest ? 'shift-badge--rest' : 'shift-badge--category'}`}>
+                    {formatRestBetweenShifts(restMinutes)}
                   </span>
+                ) : isShortRest ? (
+                  <span className="shift-badge shift-badge--rest">Riposo breve</span>
                 ) : null}
               </div>
             </div>

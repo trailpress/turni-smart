@@ -3,7 +3,7 @@
 // resta verificabile con `node --test`.
 import { REST_CODES, SPECIAL_CODES, formatCompactTime } from '../parserPreconoscenza.js';
 import { BALLOTTAGGI, getShiftCategory } from '../constants/shiftClassification.js';
-import { compactTimeToMinutes, formatMinutes, timeToMinutes } from './timeUtils.js';
+import { compactTimeToMinutes, formatMinutes, formatRestBetweenShifts, timeToMinutes } from './timeUtils.js';
 
 // La giornata di un turnista non comincia a mezzanotte: la barra oraria parte
 // dalle 04:00 e copre 24 ore, cosi' un serale che sfora resta nella riga.
@@ -152,6 +152,7 @@ function buildShiftRow(day, enrichment) {
     isSplit: Boolean(enrichment?.isSplit ?? category.isSplit),
     isEvening: Boolean(enrichment?.isEvening ?? category.isEvening),
     isShortRest: Boolean(enrichment?.isShortRest),
+    restLabel: formatRestBetweenShifts(enrichment?.restMinutes),
     hasDevelopment: segments.length > 0,
     blocks: buildTimelineBlocks(intervals),
   };
