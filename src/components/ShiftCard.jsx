@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react';
-import { formatMinutes, minutesBetween } from '../utils/timeUtils.js';
+import { formatMinutes, formatRestBetweenShifts, formatRestValue, minutesBetween } from '../utils/timeUtils.js';
 import { getDevSegments } from '../parserOrari.js';
 import { getLineDisplayName } from '../constants/depotGerbido.js';
 import { getChangePointAddress, normalizeChangePoint } from '../constants/changePoints.js';
 import { BALLOTTAGGI } from '../constants/shiftClassification.js';
 import { buildGttPassagesTarget, buildMoovitFromDepotUrl, getPrimaryGttChangePoint } from '../utils/gttLinks.js';
 import { buildBusRadarTarget } from '../utils/busRadar.js';
-import { describeShiftTiming } from '../utils/shiftTiming.js';
+import { describeShiftTiming, formatDistantCountdown, shiftEndDate, shiftSpanMinutes, shiftStartDate } from '../utils/shiftTiming.js';
 import { subscribeToClock } from '../utils/clock.js';
 import { getReminderNote } from '../calendarExport.js';
 import { BusRadarModal, VehicleShiftButton } from './BusRadarPanel.jsx';
@@ -236,7 +236,7 @@ function getSegmentVehicleStorageKey({ dayData, date, index, segment, shift }) {
     .join('|');
 }
 
-export function ShiftCard({ calendarActions, date, developments = {}, enrichment = null, onAssignTurn, shift, dayData }) {
+export function ShiftCard({ calendarActions, date, developments = {}, enrichment = null, onAssignTurn, onRemoveShift, onReplaceShift, shift, dayData }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [assignedTurn, setAssignedTurn] = useState('');
   const [assignedTurnError, setAssignedTurnError] = useState('');
@@ -361,6 +361,12 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
   const isEvening = Boolean(enrichment?.isEvening ?? shift.isEvening);
   const isShortRest = Boolean(enrichment?.isShortRest ?? shift.isShortRest);
   const restMinutes = enrichment?.restMinutes ?? shift.restMinutes ?? null;
+  const isAfternoonToMorning = Boolean(enrichment?.isAfternoonToMorning);
+  const previousEnd = enrichment?.previousEnd || '';
+  /* Il riposo dal turno prima, sempre, con il suo tono: neutro, arancione se
+     dal pomeriggio al mattino, rosso sotto le undici ore. */
+  const restValue = formatRestValue(restMinutes);
+  const restFact = restValue ? { value: restValue, tone: isShortRest ? 'short' : isAfternoonToMorning ? 'late' : 'plain' } : null;
   const category = enrichment?.category || shift.category;
   const hasSegments = segments.length > 0;
   const legPause = hasMultipleLegs ? minutesBetween(segments[0].end, segments[1].start) : null;
@@ -438,15 +444,23 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
                 {dayData && !dayData.isGerbidoLine ? <span className="shift-badge shift-badge--rest">Linea non riconosciuta</span> : null}
                 {isSplit ? <span className="shift-badge shift-badge--warning">2 riprese</span> : null}
                 {showEveningBadge ? <span className="shift-badge shift-badge--evening">Serale</span> : null}
-                {/* "Riposo breve" da solo non dice niente: il numero si', ed
-                    e' quello che interessa - quanto si sta a casa fra il turno
-                    prima e questo. */}
-                {isShortRest ? (
-                  <span className="shift-badge shift-badge--rest">
-                    {restMinutes ? `${formatMinutes(restMinutes)} dal turno prima` : 'Riposo breve'}
+                {/* Quanto si sta a casa fra il turno prima e questo, su ogni turno e
+                    non solo quando e' poco: dal pomeriggio tardi al mattino e'
+                    il numero che si va a cercare. Sotto le undici ore e' rosso. */}
+                {formatRestBetweenShifts(restMinutes) && (isShortRest || isAfternoonToMorning) ? (
+                  <span className={`shift-badge ${isShortRest ? 'shift-badge--rest' : 'shift-badge--late'}`}>
+                    {isAfternoonToMorning ? 'Pomeriggio → mattina · ' : ''}
+                    {formatRestBetweenShifts(restMinutes)}
                   </span>
+                ) : isShortRest ? (
+                  <span className="shift-badge shift-badge--rest">Riposo breve</span>
                 ) : null}
               </div>
+              {isAfternoonToMorning && previousEnd ? (
+                <p className="shift-rest-note">
+                  Il turno prima finisce alle {previousEnd}, questo attacca alle {shift.start}.
+                </p>
+              ) : null}
             </div>
 
             <div className="shift-card__body">
@@ -471,11 +485,11 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
                 </div>
               </div>
 
-              <ShiftTiming dayData={dayData} duration={shift.duration} />
+              <ShiftTiming dayData={dayData} duration={shift.duration} rest={restFact} />
             </div>
 
             <div className="shift-calendar-zone">
-              {calendarActions ? <CalendarActions actions={calendarActions(dayData, segments)} gttTarget={gttTarget} moovitTarget={moovitTarget} shareText={shareText} shift={shift} unknownPlace={unknownPlace} /> : null}
+              {calendarActions ? <CalendarActions actions={calendarActions(dayData, segments)} gttTarget={gttTarget} moovitTarget={moovitTarget} onRemove={onRemoveShift && dayData?.t === 'turno' ? () => onRemoveShift(dayData) : null} onReplace={onReplaceShift && dayData?.t === 'turno' ? () => onReplaceShift(dayData) : null} shareText={shareText} shift={shift} unknownPlace={unknownPlace} /> : null}
             </div>
           </div>
 
@@ -529,7 +543,7 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
  * Il conto alla rovescia si ricalcola qui dentro e non nella card, cosi'
  * ogni secondo si ridisegna questa riga e non tutto il turno.
  */
-function ShiftTiming({ dayData, duration }) {
+function ShiftTiming({ dayData, duration, rest = null }) {
   const [now, setNow] = useState(() => Date.now());
   const timing = describeShiftTiming(dayData, new Date(now));
 
@@ -539,39 +553,63 @@ function ShiftTiming({ dayData, duration }) {
     return subscribeToClock(setNow);
   }, [timing.isLive]);
 
-  if (!duration && !timing.live && !timing.wakeUp) return null;
+  const start = shiftStartDate(dayData);
+  const end = shiftEndDate(dayData);
+  const awayMinutes = start ? Math.round((start.getTime() - now) / 60000) : null;
+  const spanMinutes = shiftSpanMinutes(dayData);
+  const durationValue = duration || (spanMinutes ? formatMinutes(spanMinutes) : '');
 
-  return (
-    <div className={timing.isImminent ? 'shift-timing shift-timing--imminent' : 'shift-timing'}>
-      {duration ? (
-        <span className="shift-timing__item">
-          <Icon name="clock" size={15} />
-          Durata {duration}
-        </span>
-      ) : null}
-      {timing.live ? (
-        <span
-          className={
-            timing.live.ticksBySecond
-              ? 'shift-timing__item shift-timing__item--countdown is-ticking'
-              : 'shift-timing__item shift-timing__item--countdown'
-          }
-        >
-          <Icon name="clock" size={15} />
-          Attacchi tra{' '}
-          {/* Il valore vivo resta fuori dalle letture assistive: un numero
-              che cambia ogni secondo renderebbe la card illeggibile allo
-              screen reader. La riga accanto dice la stessa cosa, ferma. */}
+  if (!durationValue && !start && !rest && !timing.wakeUp) return null;
+
+  /* «Attacchi tra» c'e' sempre: vivo nelle ultime ore, fermo se manca di piu',
+     e quando il turno e' gia' cominciato dice com'e' messo. */
+  let startValue = null;
+  if (start) {
+    if (timing.live) {
+      startValue = (
+        <>
+          {/* Il valore vivo resta fuori dalle letture assistive: un numero che
+              cambia ogni secondo renderebbe la card illeggibile allo screen
+              reader. La riga accanto dice la stessa cosa, ferma. */}
           <span aria-hidden="true" className="shift-timing__value">
             <span>{timing.live.head}</span>
-            {timing.live.separator ? (
-              <span className="shift-timing__separator">{timing.live.separator}</span>
-            ) : null}
+            {timing.live.separator ? <span className="shift-timing__separator">{timing.live.separator}</span> : null}
             {timing.live.tail ? <span>{timing.live.tail}</span> : null}
           </span>
           <span className="sr-only">{timing.countdown}</span>
-        </span>
-      ) : null}
+        </>
+      );
+    } else if (awayMinutes > 0) {
+      startValue = formatDistantCountdown(awayMinutes);
+    } else if (end && now < end.getTime()) {
+      startValue = 'In servizio';
+    } else {
+      startValue = 'Finito';
+    }
+  }
+
+  return (
+    <div className={timing.isImminent ? 'shift-timing shift-timing--imminent' : 'shift-timing'}>
+      <div className="shift-facts">
+        {durationValue ? (
+          <div className="shift-fact">
+            <small>Durata</small>
+            <strong>{durationValue}</strong>
+          </div>
+        ) : null}
+        {startValue ? (
+          <div className={timing.live?.ticksBySecond ? 'shift-fact shift-fact--countdown is-ticking' : 'shift-fact shift-fact--countdown'}>
+            <small>Attacchi tra</small>
+            <strong>{startValue}</strong>
+          </div>
+        ) : null}
+        {rest ? (
+          <div className={`shift-fact shift-fact--rest-${rest.tone}`}>
+            <small>Dal turno precedente</small>
+            <strong>{rest.value}</strong>
+          </div>
+        ) : null}
+      </div>
       {timing.wakeUp ? (
         <span className="shift-timing__item shift-timing__item--wake">
           <AssetIcon name="rest" size={17} />
@@ -691,7 +729,7 @@ function DevelopmentPanel({ expanded = false, hasMultipleLegs, hasSegments, isSp
   );
 }
 
-function CalendarActions({ actions, compact = false, gttTarget = null, moovitTarget = null, shareText = '', shift = null, unknownPlace = '' }) {
+function CalendarActions({ actions, compact = false, gttTarget = null, moovitTarget = null, onRemove = null, onReplace = null, shareText = '', shift = null, unknownPlace = '' }) {
   const [copied, setCopied] = useState(false);
   if (!actions) return null;
 
@@ -769,6 +807,16 @@ function CalendarActions({ actions, compact = false, gttTarget = null, moovitTar
             <Icon name="copy" size={18} />
             {copied ? 'Copiato' : 'Copia turno'}
           </button>
+          {onReplace ? (
+            <button className="inline-action inline-action--replace" onClick={onReplace} type="button">
+              Sostituisci turno
+            </button>
+          ) : null}
+          {onRemove ? (
+            <button className="inline-action inline-action--danger" onClick={onRemove} type="button">
+              Elimina turno
+            </button>
+          ) : null}
           {gttTarget?.url ? (
             <button className="inline-action inline-action--gtt" onClick={openGttPassages} title={gttTarget.title} type="button">
               <AssetIcon name="gttPassages" size={22} />

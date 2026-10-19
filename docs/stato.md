@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 10 ottobre 2026 · 267 test verdi · issue aperte: #63, #64*
+*Aggiornato: 19 ottobre 2026 · 275 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -80,6 +80,24 @@ etichette sulle loro righe, ma solo se per ogni turno della pagina il «tempo
 netto di guida» e' la somma delle durate dei tratti: senza quella prova il testo
 non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
 Orari.**
+
+**Card del turno: durata, attacchi tra, intervallo** — tre riquadri con la loro
+etichetta su ogni card di turno: **Durata** (dalla preconoscenza, o dagli orari
+di attacco e fine), **Attacchi tra** (vivo nelle ultime ore, poi ore e minuti,
+oltre 48 ore a giorni; «In servizio» e «Finito» a turno cominciato), **Dal turno
+precedente** (quanto passa dalla fine del turno prima: ore e minuti, a giorni
+oltre 48 ore, anche dopo dei riposi). Il terzo e' neutro, **arancione** se il
+turno prima finisce dalle 16:00 in poi o dopo mezzanotte e il giorno dopo si
+attacca prima di mezzogiorno (anche con piu' di undici ore), **rosso** sotto le
+undici ore. Le due soglie (16:00 e 12:00) sono di evidenza, non dell'Accordo:
+stanno in `analytics.js`. Stessa evidenza nella vista Periodo.
+
+**Cambio turno** — su ogni card di turno, anche quella che viene dal PDF,
+«Altre azioni» → **Sostituisci turno** (apre l'inserimento del turno comunicato
+su quel giorno; il vecchio resta finche' il nuovo non e' inserito) oppure
+**Elimina turno** (dopo conferma il giorno esce dal periodo e dalla copia salvata
+del mese). Ricaricare il PDF riporta i turni com'erano. Non si elimina l'unico
+giorno caricato.
 
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 

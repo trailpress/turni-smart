@@ -1970,6 +1970,17 @@ select:focus-visible {
   color: #fff;
 }
 
+.shift-badge--late {
+  background: #e65100;
+  color: #fff;
+}
+
+.shift-rest-note {
+  margin: 6px 0 0;
+  font-weight: 700;
+  color: #ffb74d;
+}
+
 .shift-route {
   display: grid;
   grid-template-columns: minmax(118px, max-content) minmax(0, 1fr) minmax(118px, max-content);
@@ -2176,6 +2187,12 @@ select:focus-visible {
   border: 1px solid rgba(141, 216, 255, 0.3);
   background: rgba(141, 216, 255, 0.12);
   color: #d9ecff;
+}
+
+.inline-action--danger {
+  border: 1px solid rgba(255, 138, 128, 0.5);
+  background: rgba(198, 40, 40, 0.22);
+  color: #ffd2cc;
 }
 
 .inline-action--gtt {
@@ -4887,6 +4904,12 @@ a.inline-action--gtt {
   color: #e6d8ff;
 }
 
+.overview-tag--late {
+  border-color: #ff9800;
+  background: rgba(230, 81, 0, 0.55);
+  color: #fff;
+}
+
 .overview-tag--warning {
   border-color: var(--yellow);
   background: rgba(255, 209, 0, 0.24);
@@ -6122,4 +6145,51 @@ a.inline-action--gtt {
   color: var(--muted);
   font-size: 0.72rem;
   line-height: 1.5;
+}
+
+/* I tre numeri della card, ognuno con la sua etichetta: durata, quanto manca
+   all'attacco, quanto e' passato dal turno prima. */
+.shift-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(104px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.shift-fact {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  border: 1px solid rgba(141, 216, 255, 0.28);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.shift-fact small {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: #bcd8f5;
+}
+
+.shift-fact strong {
+  font-size: 1.08rem;
+  color: #fff;
+}
+
+.shift-fact--rest-late {
+  border-color: #ff9800;
+  background: rgba(230, 81, 0, 0.5);
+}
+
+.shift-fact--rest-short {
+  border-color: #ff8a80;
+  background: rgba(198, 40, 40, 0.5);
+}
+
+.inline-action--replace {
+  border: 1px solid rgba(255, 209, 0, 0.55);
+  background: rgba(255, 209, 0, 0.16);
+  color: #ffe9a0;
 }

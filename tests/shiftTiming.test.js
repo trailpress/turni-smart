@@ -94,3 +94,19 @@ test('il conto vivo e quello statico raccontano lo stesso minuto', () => {
   assert.equal(t.countdown, '9h 20m');
   assert.equal(t.live.head, '9h 20m');
 });
+
+import { formatDistantCountdown, shiftEndDate, shiftSpanMinutes } from '../src/utils/shiftTiming.js';
+
+test('la durata dagli orari, anche quando il turno finisce dopo mezzanotte', () => {
+  assert.equal(shiftSpanMinutes({ t: 'turno', iso: '2026-10-19', i: '1226', e: '1700' }), 274);
+  assert.equal(shiftSpanMinutes({ t: 'turno', iso: '2026-10-19', i: '1630', e: '0100' }), 510);
+  assert.equal(shiftEndDate({ t: 'turno', iso: '2026-10-19', i: '1630', e: '0100' }).getDate(), 20);
+  assert.equal(shiftSpanMinutes({ t: 'RP', iso: '2026-10-19' }), null);
+});
+
+test('«attacchi tra» a ore e minuti, e a giorni oltre le 48 ore', () => {
+  assert.equal(formatDistantCountdown(195), '3h 15m');
+  assert.equal(formatDistantCountdown(47 * 60), '47h');
+  assert.equal(formatDistantCountdown(50 * 60), '2g 2h');
+  assert.equal(formatDistantCountdown(72 * 60), '3g');
+});
