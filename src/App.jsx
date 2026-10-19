@@ -845,6 +845,35 @@ export default function App() {
     return nextDay;
   }
 
+  /* Un cambio turno: quello che il PDF diceva non vale piu', e quello nuovo si
+     inserisce a mano. Il turno si toglie solo dal periodo in uso e dalla copia
+     salvata di questo mese; ricaricare il PDF lo riporta com'era. Subito dopo
+     si apre l'inserimento sullo stesso giorno, che e' quello che si vuole fare. */
+  function removeShift(day) {
+    const iso = day?.iso;
+    if (!iso || !days[iso]) return;
+    const label = dateFormatter.format(day.date || new Date(`${iso}T00:00:00`));
+    if (Object.keys(days).length <= 1) {
+      window.alert('E\' l\'unico giorno caricato: per toglierlo chiudi la Preconoscenza da Altro.');
+      return;
+    }
+    const name = day.l && day.n ? `${day.l} / ${day.n}` : 'di questo giorno';
+    if (!window.confirm(`Vuoi eliminare il turno ${name} del ${label}? Poi puoi inserire quello nuovo.`)) return;
+
+    const nextDays = { ...days };
+    delete nextDays[iso];
+    setDays(nextDays);
+    if (pdfInfo?.dIn) {
+      if (!savePreconoscenza({ ...pdfInfo, days: nextDays })) markStorageFailure('Turno eliminato');
+      refreshHistory();
+    }
+    setSearchResults([]);
+    setSelectedDate(day.date || new Date(`${iso}T00:00:00`));
+    setSearchMessage(`Turno del ${label} eliminato. Inserisci quello nuovo qui sotto.`);
+    setManualEntryOpen(true);
+    setActiveSection('oggi');
+  }
+
   function insertSuspendedShift() {
     setSuspendedShiftError('');
     const fallbackDate = manualEntryDate;
@@ -1018,6 +1047,7 @@ export default function App() {
         key={displayDay?.iso || shift.date}
         calendarActions={(dayForExport) => buildCalendarActions([dayForExport], `turno-${dayForExport?.iso || 'turno'}.ics`)}
         onAssignTurn={applyCommunicatedShift}
+        onRemoveShift={removeShift}
         shift={shift}
       />
     );

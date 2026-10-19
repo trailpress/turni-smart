@@ -91,6 +91,11 @@ ore. Le due soglie (16:00 e 12:00) sono di evidenza, non dell'Accordo: stanno in
 numero non si mostra. Il calcolo c'era gia' (`restMinutes`): prima si vedeva
 solo sotto le undici ore.
 
+**Cambio turno** — dalla card del turno, «Altre azioni» → **Elimina turno**: dopo
+la conferma il giorno esce dal periodo in uso e dalla copia salvata del mese, e
+si apre l'inserimento del turno comunicato sulla stessa data. Ricaricare il PDF
+riporta il turno com'era. Non si puo' eliminare l'unico giorno caricato.
+
 **Turni** — classificati secondo l'Accordo TPL (100/200/300/400, T2R, T2RP).
 
 **Sveglie** — suggerimento per i turni che attaccano presto, con scorciatoia iOS.

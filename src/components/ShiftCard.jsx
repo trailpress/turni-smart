@@ -236,7 +236,7 @@ function getSegmentVehicleStorageKey({ dayData, date, index, segment, shift }) {
     .join('|');
 }
 
-export function ShiftCard({ calendarActions, date, developments = {}, enrichment = null, onAssignTurn, shift, dayData }) {
+export function ShiftCard({ calendarActions, date, developments = {}, enrichment = null, onAssignTurn, onRemoveShift, shift, dayData }) {
   const [isFlipped, setIsFlipped] = useState(false);
   const [assignedTurn, setAssignedTurn] = useState('');
   const [assignedTurnError, setAssignedTurnError] = useState('');
@@ -489,7 +489,7 @@ export function ShiftCard({ calendarActions, date, developments = {}, enrichment
             </div>
 
             <div className="shift-calendar-zone">
-              {calendarActions ? <CalendarActions actions={calendarActions(dayData, segments)} gttTarget={gttTarget} moovitTarget={moovitTarget} shareText={shareText} shift={shift} unknownPlace={unknownPlace} /> : null}
+              {calendarActions ? <CalendarActions actions={calendarActions(dayData, segments)} gttTarget={gttTarget} moovitTarget={moovitTarget} onRemove={onRemoveShift && dayData?.t === 'turno' ? () => onRemoveShift(dayData) : null} shareText={shareText} shift={shift} unknownPlace={unknownPlace} /> : null}
             </div>
           </div>
 
@@ -705,7 +705,7 @@ function DevelopmentPanel({ expanded = false, hasMultipleLegs, hasSegments, isSp
   );
 }
 
-function CalendarActions({ actions, compact = false, gttTarget = null, moovitTarget = null, shareText = '', shift = null, unknownPlace = '' }) {
+function CalendarActions({ actions, compact = false, gttTarget = null, moovitTarget = null, onRemove = null, shareText = '', shift = null, unknownPlace = '' }) {
   const [copied, setCopied] = useState(false);
   if (!actions) return null;
 
@@ -783,6 +783,11 @@ function CalendarActions({ actions, compact = false, gttTarget = null, moovitTar
             <Icon name="copy" size={18} />
             {copied ? 'Copiato' : 'Copia turno'}
           </button>
+          {onRemove ? (
+            <button className="inline-action inline-action--danger" onClick={onRemove} type="button">
+              Elimina turno
+            </button>
+          ) : null}
           {gttTarget?.url ? (
             <button className="inline-action inline-action--gtt" onClick={openGttPassages} title={gttTarget.title} type="button">
               <AssetIcon name="gttPassages" size={22} />

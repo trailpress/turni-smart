@@ -2189,6 +2189,12 @@ select:focus-visible {
   color: #d9ecff;
 }
 
+.inline-action--danger {
+  border: 1px solid rgba(255, 138, 128, 0.5);
+  background: rgba(198, 40, 40, 0.22);
+  color: #ffd2cc;
+}
+
 .inline-action--gtt {
   border: 1px solid rgba(255, 209, 0, 0.38);
   background: rgba(255, 209, 0, 0.14);
