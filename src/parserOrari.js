@@ -577,6 +577,7 @@ export function parseOrari(pagesText, { diagnostics = null, places = null } = {}
 
     if (diagnostics) {
       const entry = diagnostics[diagnostics.length - 1];
+      entry.line = line;
       entry.returns = returns.length;
       entry.exits = exits.length;
       /* Una pagina che ha i marcatori del grafico ma non produce rientri o

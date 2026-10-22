@@ -1,5 +1,6 @@
 import { DEPOT_CODE, getServiceTypes, normalizePlace } from './depotReturns.js';
-import { isRientriKey, isUsciteKey } from '../parserRientri.js';
+import { isRientriKey, isUsciteKey, parseDepotExits, parseDepotTransferTimes } from '../parserRientri.js';
+import { normalizeLineCode } from '../constants/depotGerbido.js';
 import { timeToMinutes } from './timeUtils.js';
 
 /**
@@ -221,6 +222,47 @@ export function rawExcerpt(pages = [], item = null) {
   return rows.slice(from, from + EXCERPT_LINES).map((row) => row.trim().slice(0, 150));
 }
 
+const MAX_LINE_PAGES = 3;
+const LINE_EXCERPT_CHARS = 900;
+
+/**
+ * Cosa c'e' scritto, e cosa si legge, sulle pagine del grafico di una linea.
+ *
+ * Serve quando un'uscita o un rientro che sulla carta c'e' non compare: dice
+ * quanti «Esce» e «I.L.» ci sono sulla pagina, quali si abbinano, e mostra il
+ * testo cosi' com'e' uscito dal PDF. E' il solo modo di vedere dove un
+ * abbinamento si perde senza avere la pagina sotto mano.
+ */
+export function describeLinePages(pages = [], line = '') {
+  const wanted = normalizeLineCode(line);
+  if (!wanted) return [];
+  const out = [];
+
+  pages
+    .filter((page) => typeof page.text === 'string' && page.line && normalizeLineCode(page.line) === wanted && /ESCE|U\.?L\.?/i.test(page.text))
+    .slice(0, MAX_LINE_PAGES)
+    .forEach((page) => {
+      const flat = page.text.toUpperCase().replace(/\s+/g, ' ');
+      const esce = [...flat.matchAll(/ESCE\s+(\d{1,2}[.:]\d{2})\s+([A-Z0-9]+)/g)].map((m) => `${m[1]} ${m[2]}`);
+      const il = [...flat.matchAll(/\bI\.?L\.?\s+(\d{1,2}[.:]\d{2})\s+([A-Z0-9]+)/g)].map((m) => `${m[1]} ${m[2]}`);
+      const ul = [...flat.matchAll(/\bU\.?L\.?\s+(\d{1,2}[.:]\d{2})\s+([A-Z0-9]+)/g)].length;
+      const entra = [...flat.matchAll(/ENTRA\s+(\d{1,2}[.:]\d{2})/g)].length;
+      const parsed = parseDepotExits(page.text, { gt: page.gt, line: wanted }).map((exit) => `${exit.start}→${exit.end} ${exit.loc_e}`);
+      const transfers = Object.entries(parseDepotTransferTimes(page.text)).map(([place, times]) => `${place} ${times.out ?? '-'}/${times.in ?? '-'}`);
+      const first = flat.indexOf('ESCE');
+
+      out.push(`p${page.page} "${page.gt}" linea ${wanted}`);
+      out.push(`  Esce ${esce.length}: ${esce.join(' · ') || '-'}`);
+      out.push(`  I.L. ${il.length}: ${il.join(' · ') || '-'}`);
+      out.push(`  U.L. ${ul} · Entra ${entra}`);
+      out.push(`  abbinate ${parsed.length}: ${parsed.join(' · ') || '-'}`);
+      out.push(`  tempi uscita/rientro: ${transfers.join(' · ') || 'non letti'}`);
+      out.push(`  testo: ${flat.slice(Math.max(0, first - 60), Math.max(0, first - 60) + LINE_EXCERPT_CHARS)}`);
+    });
+
+  return out;
+}
+
 const MAX_MIXED = 12;
 const MAX_RUNS = 24;
 // Quanti orari di rientro mostrare per linea prima di riassumere.
@@ -228,7 +270,7 @@ const MAX_TIMES = 14;
 const MAX_EXCERPTS = 3;
 
 /** Il referto in testo semplice, fatto per essere fotografato o incollato. */
-export function buildOrariReport({ developments = {}, pages = null } = {}) {
+export function buildOrariReport({ developments = {}, pages = null, line = '' } = {}) {
   const lines = ['ORARI · diagnostica'];
 
   if (pages?.length) {
@@ -323,6 +365,13 @@ export function buildOrariReport({ developments = {}, pages = null } = {}) {
       lines.push(`testo grezzo vicino a ${target.key}:`);
       excerpt.forEach((line) => lines.push(`  | ${line}`));
     }
+  }
+
+  if (line && pages?.length) {
+    const section = describeLinePages(pages, line);
+    lines.push('--');
+    lines.push(section.length ? `grafico della linea ${normalizeLineCode(line)}:` : `grafico della linea ${line}: nessuna pagina trovata`);
+    section.forEach((row) => lines.push(row));
   }
 
   /* Le pagine che hanno i marcatori del grafico ma non ne hanno ricavato tutto.

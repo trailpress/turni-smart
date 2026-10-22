@@ -244,3 +244,20 @@ test('il referto mostra il testo grezzo vicino al primo sviluppo mescolato', () 
   assert.match(report, /testo grezzo vicino a 56 56:/);
   assert.match(report, /\| 56 \/ 13 11\.08 SIRA R 13\.37 SIRA 05\.54 05\.54 -----/);
 });
+
+test('con la linea nel referto si vedono gli Esce e gli I.L. della sua pagina, e quali si abbinano', () => {
+  const text = '1 ESCE 05.50 CAIQ 5 ESCE 06.35 CAIQ GER I.L. 06.00 CAIQ GER I.L. 06.45 CAIQ TEMPI DI USCITA / RIENTRO 39 GERB - CAIQ 10 10';
+  const pages = [
+    { gt: 'LUN - VEN', own: 'LUN - VEN', page: 5, line: '39', text },
+    { gt: 'LUN - VEN', own: 'LUN - VEN', page: 6, line: '5', text: '1 ESCE 04.13 CATT GER I.L. 04.22 CATT' },
+  ];
+  const report = buildOrariReport({ developments: {}, line: '39', pages });
+
+  assert.match(report, /grafico della linea 39:/);
+  assert.match(report, /Esce 2: 05\.50 CAIQ · 06\.35 CAIQ/);
+  assert.match(report, /I\.L\. 2: 06\.00 CAIQ · 06\.45 CAIQ/);
+  assert.match(report, /abbinate 2: 05:50→06:00 CAIQ · 06:35→06:45 CAIQ/);
+  assert.match(report, /tempi uscita\/rientro: CAIQ 10\/10/);
+  assert.doesNotMatch(report, /ESCE 04\.13/);
+  assert.match(buildOrariReport({ developments: {}, line: '77', pages }), /nessuna pagina trovata/);
+});

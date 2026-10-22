@@ -535,6 +535,15 @@ async function extractTextPagesFromPdf(file) {
    all'indirizzo, e serve a leggere come il parser ha diviso le pagine del PDF
    fra feriale, sabato e festivo - una cosa che dai dati caricati non si vede.
    Senza il parametro nella app non compare niente. */
+/* ?diag=orari&linea=39 aggiunge al referto il grafico di quella linea. */
+function readOrariDiagnosticsLine() {
+  try {
+    return new URLSearchParams(window.location.search).get('linea') || '';
+  } catch {
+    return '';
+  }
+}
+
 function readOrariDiagnosticsFlag() {
   try {
     return new URLSearchParams(window.location.search).get('diag') === 'orari';
@@ -560,6 +569,7 @@ export default function App() {
   const [orariPlaces, setOrariPlaces] = useState({});
   const [orariLoaded, setOrariLoaded] = useState(false);
   const diagnosticsOn = useMemo(() => readOrariDiagnosticsFlag(), []);
+  const diagnosticsLine = useMemo(() => readOrariDiagnosticsLine(), []);
   /* Il referto per pagina esiste solo se il PDF viene riletto con la botola
      aperta: le pagine non si salvano, negli sviluppi restano solo i segmenti. */
   const [orariPageDiagnostics, setOrariPageDiagnostics] = useState(null);
@@ -1729,10 +1739,10 @@ export default function App() {
           {/* La botola: compare solo con ?diag=orari nell'indirizzo. */}
           {diagnosticsOn ? (
             <div className="orari-diagnostics">
-              <pre>{buildOrariReport({ developments, pages: orariPageDiagnostics })}</pre>
+              <pre>{buildOrariReport({ developments, line: diagnosticsLine, pages: orariPageDiagnostics })}</pre>
               <button
                 onClick={() =>
-                  navigator.clipboard?.writeText(buildOrariReport({ developments, pages: orariPageDiagnostics }))
+                  navigator.clipboard?.writeText(buildOrariReport({ developments, line: diagnosticsLine, pages: orariPageDiagnostics }))
                 }
                 type="button"
               >
