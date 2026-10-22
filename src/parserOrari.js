@@ -437,8 +437,11 @@ function addSegment(developments, code, segment) {
   if (!exists) developments[code].push(segment);
 }
 
+/* In coda alla prima riga di ogni turno il PDF scrive il tempo netto di guida:
+   si conserva (`netMinutes`) perche' e' il controllo con cui si verifica che i
+   tratti letti siano davvero quelli del turno. */
 const TABLE_SEGMENT_RE =
-  /([A-Z0-9/()]+)\s*\/\s*(\d+)\s+(\d{2}[.:]\d{2})\s+([A-Z]{2,4})\s+([AR-])\s+(\d{2}[.:]\d{2})\s+([A-Z]{2,4})/i;
+  /([A-Z0-9/()]+)\s*\/\s*(\d+)\s+(\d{2}[.:]\d{2})\s+([A-Z]{2,4})\s+([AR-])\s+(\d{2}[.:]\d{2})\s+([A-Z]{2,4})(?:\s+(\d{2})[.:](\d{2})\s+\d{2}[.:]\d{2})?/i;
 const TABLE_CONTINUATION_RE =
   /^([A-Z0-9/()]+)\s+(?:\/\s*)?(\d+)\s+(\d{2}[.:]\d{2})\s+([A-Z]{2,4})\s+([AR-])\s+(\d{2}[.:]\d{2})\s+([A-Z]{2,4})/i;
 
@@ -478,6 +481,10 @@ function parseOrariTableRows(text, gt, ver, developments, tableState) {
         ver,
         run_id: state.currentRun || 1,
       };
+      if (segmentMatch[8] !== undefined) {
+        const net = Number(segmentMatch[8]) * 60 + Number(segmentMatch[9]);
+        if (Number.isFinite(net) && net > 0) segment.netMinutes = net;
+      }
 
       addSegment(developments, state.currentCode, segment);
     });
