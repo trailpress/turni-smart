@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 22 ottobre 2026 · 276 test verdi · issue aperte: #63, #64*
+*Aggiornato: 22 ottobre 2026 · 278 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -94,9 +94,15 @@ stanno in `analytics.js`. Stessa evidenza nella vista Periodo.
 
 **Referto per linea** — `?diag=orari&linea=39` aggiunge il grafico di quella
 linea: quanti «Esce» e «I.L.» ci sono sulla pagina, quali si abbinano, i tempi
-della tabella e il testo grezzo. Serve quando un'uscita o un rientro che sulla
-carta c'e' non compare (22 ottobre: la 39, vettura che esce alle 06:35, non c'e'
-nelle uscite; il referto dice 3 uscite sulla 39 LUN - VEN).
+della tabella e il testo grezzo. Il 22 ottobre ha trovato la causa di «la 39
+delle 06:35 non compare nelle uscite»: sulle pagine con piu' vetture fra
+«I.L.» e l'ora c'e' un codice di posto («I.L. CAIQ 07.35 CAIQ»), e i rientri
+escono nella forma «ENTRA U.L. 10.22 10.32 CAIQ». Il parser perdeva meta' degli
+I.L. (3 su 6 sulla 39 feriale) e ne abbinava uno alla vettura sbagliata, e 3 U.L.
+su 6. Corretto, con test sul testo vero; `RIENTRI_PARSER_VERSION` e' 3 e le
+schede Uscite e Rientri dicono di ricaricare il PDF quando la lettura e' vecchia.
+**Il difetto toccava probabilmente molte linee** (la 56 feriale ha 8 uscite per
+32 vetture): dopo aver ricaricato il PDF vale la pena guardare il referto.
 
 **Cambio turno** — su ogni card di turno, anche quella che viene dal PDF,
 «Altre azioni» → **Sostituisci turno** (apre l'inserimento del turno comunicato

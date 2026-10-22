@@ -198,6 +198,15 @@ export function DepotDeparturesPanel({ developments = {}, places = {}, stalePars
         </div>
       </form>
 
+      {/* Una lettura fatta prima della correzione del 22 ottobre (la 39 feriale
+          perdeva meta' delle uscite) non si corregge da sola: serve rileggere il
+          PDF. Lo si dice, invece di lasciare un elenco corto senza spiegazione. */}
+      {result.graphicLoaded && staleParse ? (
+        <p className="depot-returns-message">
+          Gli orari in uso sono stati letti da una versione precedente dell&apos;app, che perdeva alcune uscite. Ricarica il
+          PDF degli orari per averle tutte.
+        </p>
+      ) : null}
       {/* Senza grafico "nessuna uscita alle 07:20" e' vero ma fuorviante: non e'
           quella fascia a essere vuota, e' il PDF a non avere la pagina. La
           ragione la da' il messaggio qui sotto, da solo. */}
