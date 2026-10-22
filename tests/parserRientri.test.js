@@ -494,3 +494,29 @@ test('con piu di un capolinea opposto si tace', () => {
   `);
   assert.equal(findOppositeTerminus(ambigua, { line: '58B', place: 'GCAS' }), '');
 });
+
+// La 39 feriale, come esce dal PDF (referto del 22 ottobre): sei "Esce" ma tre
+// "I.L." avevano un codice di posto davanti all'ora, e la 06:35 restava senza il
+// suo ingresso in linea. La tabella dei tempi dichiarava CAIQ 25/10.
+const PAGINA_39_FERIALE = `PROGRAMMAZIONE 1 ESCE 04.35 BABA 2 ESCE 07.25 CAIQ 3 ESCE 06.04 CAIQ
+URBANO GER BABA I.L. CAIQ 05.00 CAIQ BABA GER BABA I.L. CAIQ 07.35 CAIQ CAIQ GER BABA I.L. CAIQ 06.14 CAIQ CAIQ
+101 002 003 P.ZA BADEN BADEN P.ZA CAIO MARIO 39 AUTOBUS
+4 ESCE 12.54 CAIQ 5 ESCE 04.50 CAIQ 6 ESCE 06.35 CAIQ
+GER I.L. 13.04 CAIQ GER I.L. 05.00 CAIQ GER I.L. 06.45 CAIQ
+TEMPI DI USCITA / RIENTRO 39 GERB - CAIQ 25 10
+LEGENDA LINEA ENTRA U.L. 10.22 10.32 CAIQ LINEA ENTRA U.L. 21.40 21.50 CAIQ
+LINEA U.L. 21.19 CAIQ ENTRA 21.29`;
+
+test('le uscite con un codice di posto fra I.L. e l\'ora si abbinano tutte, ognuna alla sua', () => {
+  const exits = parseDepotExits(PAGINA_39_FERIALE, { gt: 'LUN - VEN', line: '39' });
+  const coppie = exits.map((exit) => `${exit.start}>${exit.end}`).sort();
+
+  assert.deepEqual(coppie, ['04:35>05:00', '04:50>05:00', '06:04>06:14', '06:35>06:45', '07:25>07:35', '12:54>13:04']);
+});
+
+test('i rientri nella forma "ENTRA U.L. 10.22 10.32 CAIQ" si leggono, senza perdere gli altri', () => {
+  const returns = parseDepotReturns(PAGINA_39_FERIALE, { gt: 'LUN - VEN', line: '39' });
+  const coppie = returns.map((item) => `${item.start}>${item.end} ${item.loc_s}`).sort();
+
+  assert.deepEqual(coppie, ['10:22>10:32 CAIQ', '21:19>21:29 CAIQ', '21:40>21:50 CAIQ']);
+});

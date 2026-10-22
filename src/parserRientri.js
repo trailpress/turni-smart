@@ -212,6 +212,36 @@ function collectDepotEntries(tokens) {
   return entries;
 }
 
+/* Un rientro nella forma degli altri tratti: dove si sale, a che ora, e dove
+   sta il capolinea quando la legenda e il tempo di rientro lo confermano. */
+function buildReturn({ end, gt, lineCode, place, places, returnsCount, start, transfers, ver }) {
+  /* Il codice da solo non dice dove sta il capolinea: lo dice il nome che la
+     legenda gli da', cercato fra i capolinea di quella linea, e poi controllato
+     contro il tempo di rientro dichiarato. */
+  const terminus = findTerminus(lineCode, places[place]?.label || '');
+  const position = plausiblePosition(
+    terminus ? { lat: terminus.lat, lng: terminus.lng } : null,
+    transfers[place]?.in ?? null,
+  );
+
+  return {
+    ln: lineCode,
+    lineaNorm: lineCode,
+    palina: terminus && position ? terminus.code : '',
+    position,
+    vett: '',
+    turnoVettura: '',
+    start,
+    loc_s: place,
+    dir: '',
+    end,
+    loc_e: DEPOT,
+    gt,
+    ver,
+    run_id: returnsCount + 1,
+  };
+}
+
 export function parseDepotReturns(text = '', { gt = '', ver = '', legend = null, line = '' } = {}) {
   const tokens = tokenize(text);
   const transfers = parseDepotTransferTimes(text);
@@ -227,11 +257,31 @@ export function parseDepotReturns(text = '', { gt = '', ver = '', legend = null,
   for (let index = 0; index < tokens.length - 2; index += 1) {
     if (!isAnchor(tokens[index], 'U')) continue;
     const departure = toMinutes(tokens[index + 1]);
-    const place = tokens[index + 2];
-    if (departure === null || !PLACE_RE.test(place) || place === DEPOT) continue;
+    /* Due forme. "U.L. 21.51 OSET", con l'Entra lontano da un'altra parte; e
+       "ENTRA U.L. 10.22 10.32 CAIQ", con l'ora di ingresso gia' accanto
+       all'U.L. e il posto in fondo - e' cosi' che escono le pagine con piu'
+       vetture, e sulla 39 feriale tre U.L. su sei andavano persi. */
+    const adjacent = toMinutes(tokens[index + 2]);
+    const combined = adjacent !== null && PLACE_RE.test(tokens[index + 3] || '');
+    const place = combined ? tokens[index + 3] : tokens[index + 2];
+    if (departure === null || !PLACE_RE.test(place || '') || place === DEPOT) continue;
 
     const expected = transfers[place]?.in ?? null;
     let chosen = -1;
+
+    if (combined) {
+      const gap = transferMinutes(departure, adjacent);
+      if (gap > 0 && gap <= MAX_TRANSFER_MINUTES) {
+        const start = formatTime(tokens[index + 1]);
+        const end = formatTime(tokens[index + 2]);
+        const identity = `${lineCode}|${place}|${start}|${end}`;
+        if (!seen.has(identity)) {
+          seen.add(identity);
+          returns.push(buildReturn({ end, gt, lineCode, place, places, returnsCount: returns.length, start, transfers, ver }));
+        }
+        continue;
+      }
+    }
 
     for (let candidate = 0; candidate < entries.length; candidate += 1) {
       if (taken.has(candidate)) continue;
@@ -256,31 +306,7 @@ export function parseDepotReturns(text = '', { gt = '', ver = '', legend = null,
     if (seen.has(identity)) continue;
     seen.add(identity);
 
-    /* Dove sta il capolinea da cui si sale. Il codice da solo non lo dice: lo
-       dice il nome che la legenda gli da', cercato fra i capolinea di quella
-       linea, e poi controllato contro il tempo di rientro dichiarato. */
-    const terminus = findTerminus(lineCode, places[place]?.label || '');
-    const position = plausiblePosition(
-      terminus ? { lat: terminus.lat, lng: terminus.lng } : null,
-      transfers[place]?.in ?? null,
-    );
-
-    returns.push({
-      ln: lineCode,
-      lineaNorm: lineCode,
-      palina: terminus && position ? terminus.code : '',
-      position,
-      vett: '',
-      turnoVettura: '',
-      start,
-      loc_s: place,
-      dir: '',
-      end,
-      loc_e: DEPOT,
-      gt,
-      ver,
-      run_id: returns.length + 1,
-    });
+    returns.push(buildReturn({ end, gt, lineCode, place, places, returnsCount: returns.length, start, transfers, ver }));
   }
 
   return returns;
@@ -313,10 +339,17 @@ function collectLineStarts(tokens) {
 
   for (let index = 0; index < tokens.length - 2; index += 1) {
     if (!isAnchor(tokens[index], 'I')) continue;
-    const minutes = toMinutes(tokens[index + 1]);
-    const place = tokens[index + 2];
-    if (minutes === null || !PLACE_RE.test(place) || place === DEPOT) continue;
-    starts.push({ minutes, place, token: tokens[index + 1] });
+    /* Sulle pagine con piu' vetture, fra "I.L." e l'ora capita un codice di
+       posto - "I.L. CAIQ 07.35 CAIQ" - che e' l'etichetta di una colonna dello
+       schema e non appartiene al dato. Dal 22 ottobre il referto della 39
+       feriale diceva sei "Esce" e tre "I.L.": gli altri tre avevano quella
+       forma. Se ne scavalcano al piu' due. */
+    let timeIndex = index + 1;
+    while (timeIndex < index + 3 && PLACE_RE.test(tokens[timeIndex] || '') && tokens[timeIndex] !== DEPOT) timeIndex += 1;
+    const minutes = toMinutes(tokens[timeIndex]);
+    const place = tokens[timeIndex + 1];
+    if (minutes === null || !PLACE_RE.test(place || '') || place === DEPOT) continue;
+    starts.push({ minutes, place, token: tokens[timeIndex] });
   }
 
   return starts;
@@ -405,8 +438,9 @@ export const RIENTRI_KEY_PREFIX = 'RIENTRI';
    uscite: senza questo numero l'app non puo' distinguerla da un PDF che il
    grafico non ce l'ha, e finisce per dare la colpa al PDF. Va alzato quando
    cambia cio' che il parser ricava dalla stessa pagina - la 2 e' quella che ha
-   aggiunto le uscite. */
-export const RIENTRI_PARSER_VERSION = 2;
+   aggiunto le uscite, la 3 quella che ha riletto gli I.L. con un codice di posto
+   davanti all'ora e i rientri nella forma «ENTRA U.L. 10.22 10.32 CAIQ». */
+export const RIENTRI_PARSER_VERSION = 3;
 
 export function rientriKey(line = '', gt = '') {
   return [RIENTRI_KEY_PREFIX, line || '?', gt].filter(Boolean).join(' ');

@@ -593,6 +593,15 @@ export function DepotReturnsPanel({ developments = {}, places = {}, staleParse =
         <p className="depot-returns-message">Criteri cambiati: premi Trova rientri da qui per aggiornare.</p>
       ) : null}
 
+      {/* Una lettura fatta prima della correzione del 22 ottobre (la 39 feriale
+          perdeva meta' dei rientri) non si corregge da sola: serve rileggere il
+          PDF. Lo si dice, invece di lasciare un elenco corto senza spiegazione. */}
+      {result.graphicLoaded && staleParse ? (
+        <p className="depot-returns-message">
+          Gli orari in uso sono stati letti da una versione precedente dell&apos;app, che perdeva alcuni rientri. Ricarica il
+          PDF degli orari per averli tutti.
+        </p>
+      ) : null}
       {/* Cosa ha fatto il GPS, detto sempre: e' l'unica cosa che spiega perche'
           un elenco e' ordinato per vicinanza e un altro no. Anche l'attesa va
           detta, perche' il telefono ci mette qualche secondo e nel frattempo
