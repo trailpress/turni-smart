@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { getLineDisplayName } from '../constants/depotGerbido.js';
-import { timeToMinutes } from '../utils/timeUtils.js';
+import { checkDevelopment } from '../utils/developmentCheck.js';
+import { formatMinutes, timeToMinutes } from '../utils/timeUtils.js';
 import { buildBusRadarTarget, normalizeVehicleShift } from '../utils/busRadar.js';
 import { BusRadarModal, VehicleShiftButton } from './BusRadarPanel.jsx';
 import { AssetIcon, Icon } from './Icon.jsx';
@@ -186,6 +187,7 @@ export function LineConsultation({ developments = {} }) {
   const visibleShifts = activeLine?.shifts.filter((item) => selectedService === 'all' || item.service === selectedService) || [];
   const activeShift = activeLine?.shifts.find((item) => item.key === selectedShiftKey) || null;
   const view = activeShift ? 'development' : activeLine ? 'shifts' : 'lines';
+  const developmentBlocks = activeShift ? checkDevelopment(activeShift.segments) : [];
 
   function handleLineSelect(line) {
     setSelectedLine(line);
@@ -287,23 +289,46 @@ export function LineConsultation({ developments = {} }) {
               <span>{activeLine.label} · {activeShift.serviceLabel}</span>
               <h3>Turno {activeShift.shift}</h3>
             </div>
-            <div className="line-development-steps">
-              {activeShift.segments.map((segment, index) => (
-                <div className="line-development-step" key={`${segment.start}-${segment.end}-${index}`} style={{ '--step-index': index }}>
-                  <strong>{index + 1}</strong>
-                  <div>
-                    <span>{segment.start} - {segment.end}</span>
-                    <p>{formatRoute(segment)}</p>
-                  </div>
-                  <VehicleShiftButton
-                    className="line-development-vehicle"
-                    label={`Vett. ${normalizeVehicleShift(segment.turnoVettura || segment.vett || '') || '-'}`}
-                    onOpen={() => setMapSegment(segment)}
-                    target={getConsultationBusRadarTarget(segment, activeLine.line)}
-                  />
+            {developmentBlocks.length > 1 ? (
+              <p className="line-development-warning">
+                Sotto questo turno ci sono {developmentBlocks.length} gruppi di righe separati: o sono turni diversi finiti
+                insieme, o versioni dell&apos;orario. Controlla ognuno qui sotto; se non tornano, ricarica il PDF Orari.
+              </p>
+            ) : null}
+            {developmentBlocks.map((block, blockIndex) => (
+              <section className="line-development-block" key={block.runId}>
+                {developmentBlocks.length > 1 ? <h4>Gruppo {blockIndex + 1}</h4> : null}
+                <p className={`line-development-check line-development-check--${block.status}`}>
+                  {block.segments.length} {block.segments.length === 1 ? 'tratto' : 'tratti'} · in servizio{' '}
+                  {formatMinutes(block.workedMinutes)}
+                  {' · '}
+                  {block.status === 'ok' ? `✓ torna con il tempo netto del PDF (${formatMinutes(block.netMinutes)})` : null}
+                  {block.status === 'mismatch' && block.netMinutes
+                    ? `⚠ il PDF dice ${formatMinutes(block.netMinutes)} di guida: non torna${block.overlaps ? ', e i tratti si accavallano' : ''}`
+                    : null}
+                  {block.status === 'mismatch' && !block.netMinutes ? '⚠ i tratti si accavallano: ci sono righe di un altro turno' : null}
+                  {block.status === 'mixed' ? '⚠ più turni mescolati in questo gruppo' : null}
+                  {block.status === 'unverified' ? 'controllo non disponibile (nessun tempo netto letto: ricarica il PDF Orari)' : null}
+                </p>
+                <div className="line-development-steps">
+                  {block.segments.map((segment, index) => (
+                    <div className="line-development-step" key={`${segment.start}-${segment.end}-${index}`} style={{ '--step-index': index }}>
+                      <strong>{index + 1}</strong>
+                      <div>
+                        <span>{segment.start} - {segment.end}</span>
+                        <p>{formatRoute(segment)}</p>
+                      </div>
+                      <VehicleShiftButton
+                        className="line-development-vehicle"
+                        label={`Vett. ${normalizeVehicleShift(segment.turnoVettura || segment.vett || '') || '-'}`}
+                        onOpen={() => setMapSegment(segment)}
+                        target={getConsultationBusRadarTarget(segment, activeLine.line)}
+                      />
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </section>
+            ))}
           </article>
         ) : null}
       </div>

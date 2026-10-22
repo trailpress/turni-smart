@@ -6193,3 +6193,47 @@ a.inline-action--gtt {
   background: rgba(255, 209, 0, 0.16);
   color: #ffe9a0;
 }
+
+/* Il controllo dello sviluppo in «Linee»: i tratti letti contro il tempo netto
+   di guida scritto sul PDF. */
+.line-development-block {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.line-development-block h4 {
+  margin: 0;
+  font-size: 0.95rem;
+  color: #bcd8f5;
+}
+
+.line-development-check {
+  margin: 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  font-weight: 700;
+  line-height: 1.35;
+  border: 1px solid rgba(141, 216, 255, 0.28);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.line-development-check--ok {
+  border-color: #43a047;
+  background: rgba(67, 160, 71, 0.25);
+}
+
+.line-development-check--mismatch,
+.line-development-check--mixed {
+  border-color: #ff9800;
+  background: rgba(230, 81, 0, 0.4);
+}
+
+.line-development-warning {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid #ff9800;
+  background: rgba(230, 81, 0, 0.3);
+  font-weight: 700;
+}

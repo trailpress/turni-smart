@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 22 ottobre 2026 · 282 test verdi · issue aperte: #63, #64*
+*Aggiornato: 22 ottobre 2026 · 287 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -81,6 +81,16 @@ con la sola prima riga e le righe senza turno si scartano. Rete di sicurezza:
 sovrapposizioni, anche nelle letture gia' salvate. **Le letture salvate prima
 vanno rifatte: ricaricare il PDF Orari.** Il referto dice su quante pagine le
 righe sono state riassemblate e quali pagine hanno turni senza prova.
+
+**Linee: lo sviluppo si verifica da solo** — il PDF scrive in coda alla prima riga
+di ogni turno il tempo netto di guida (la somma dei tratti): il parser lo
+conserva (`netMinutes`) e «Linee» → turno lo confronta con i tratti letti.
+Verde «✓ torna con il tempo netto del PDF (5h 54m)», arancione se non torna o se
+i tratti si accavallano, e se sotto lo stesso turno ci sono piu' gruppi di righe
+(`run_id`) li mostra separati («Gruppo 1», «Gruppo 2») invece di un elenco solo.
+Una lettura salvata prima di questa versione non ha il tempo netto: la schermata
+dice «controllo non disponibile: ricarica il PDF Orari». Serve a controllare un
+turno senza aspettare il giorno in cui lo si fa (`utils/developmentCheck.js`).
 
 **Card del turno: durata, attacchi tra, intervallo** — tre riquadri con la loro
 etichetta su ogni card di turno: **Durata** (dalla preconoscenza, o dagli orari
