@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 19 ottobre 2026 · 275 test verdi · issue aperte: #63, #64*
+*Aggiornato: 22 ottobre 2026 · 276 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -91,6 +91,12 @@ turno prima finisce dalle 16:00 in poi o dopo mezzanotte e il giorno dopo si
 attacca prima di mezzogiorno (anche con piu' di undici ore), **rosso** sotto le
 undici ore. Le due soglie (16:00 e 12:00) sono di evidenza, non dell'Accordo:
 stanno in `analytics.js`. Stessa evidenza nella vista Periodo.
+
+**Referto per linea** — `?diag=orari&linea=39` aggiunge il grafico di quella
+linea: quanti «Esce» e «I.L.» ci sono sulla pagina, quali si abbinano, i tempi
+della tabella e il testo grezzo. Serve quando un'uscita o un rientro che sulla
+carta c'e' non compare (22 ottobre: la 39, vettura che esce alle 06:35, non c'e'
+nelle uscite; il referto dice 3 uscite sulla 39 LUN - VEN).
 
 **Cambio turno** — su ogni card di turno, anche quella che viene dal PDF,
 «Altre azioni» → **Sostituisci turno** (apre l'inserimento del turno comunicato
