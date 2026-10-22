@@ -213,13 +213,69 @@ export function rawExcerpt(pages = [], item = null) {
   if (!times.length) return [];
 
   const has = (text, time) => text.includes(time) || text.includes(time.replace(':', '.'));
-  const page = pages.find((entry) => typeof entry.text === 'string' && times.every((time) => has(entry.text, time)));
+  const matching = pages.filter((entry) => typeof entry.text === 'string' && times.every((time) => has(entry.text, time)));
+  /* La pagina dei turni, non il grafico di servizio: anche quello porta gli
+     stessi orari, e il 10 ottobre l'estratto mostrava il grafico della 56 invece
+     delle righe dei turni, cioe' esattamente il pezzo che non serviva. */
+  const page = matching.find((entry) => tableRowCount(entry.text) >= 3) || matching[0];
   if (!page) return [];
 
   const rows = page.text.split('\n');
   const first = rows.findIndex((row) => has(row, times[0]));
   const from = Math.max(0, first - 2);
   return rows.slice(from, from + EXCERPT_LINES).map((row) => row.trim().slice(0, 150));
+}
+
+const TABLE_ROW_RE = /\d{2}[.:]\d{2}\s+[A-Z]{2,4}\s+[AR-]\s+\d{2}[.:]\d{2}\s+[A-Z]{2,4}/gi;
+const TABLE_PAGE_LINES = 40;
+const MAX_LOST_PAGES = 30;
+
+function tableRowCount(text = '') {
+  return (String(text).match(TABLE_ROW_RE) || []).length;
+}
+
+/**
+ * Le righe grezze della pagina dei turni di una linea, come escono dal PDF.
+ * Servono a vedere dove sta l'etichetta del turno rispetto alle sue righe.
+ */
+export function describeTablePage(pages = [], line = '') {
+  const wanted = normalizeLineCode(line);
+  if (!wanted) return [];
+  const rowRe = new RegExp(`(^|\\s)0?${wanted}\\s*/\\s*\\d+\\s+\\d{2}[.:]\\d{2}`, 'i');
+  const page = pages.find((entry) => typeof entry.text === 'string' && tableRowCount(entry.text) >= 3 && rowRe.test(entry.text));
+  if (!page) return [];
+  const rows = page.text.split('\n');
+  const first = Math.max(0, rows.findIndex((row) => rowRe.test(row)) - 2);
+  return [`p${page.page} "${page.gt}": ${rows.length} righe, dalla ${first + 1}`, ...rows.slice(first, first + TABLE_PAGE_LINES).map((row) => `  | ${row.trim().slice(0, 150)}`)];
+}
+
+/**
+ * Le pagine del grafico dove si leggono meno uscite o rientri di quanti la
+ * pagina ne scrive: ogni «Esce» e ogni «U.L.» e' una vettura, quindi il conto
+ * deve tornare. E' il modo di trovare in un colpo solo tutte le linee con lo
+ * stesso difetto della 39 (22 ottobre), invece di scoprirle una per volta.
+ */
+export function findLostGraphicData(pages = []) {
+  return pages
+    .filter((page) => typeof page.text === 'string' && page.text)
+    .map((page) => {
+      const flat = page.text.toUpperCase().replace(/\s+/g, ' ');
+      const esce = [...flat.matchAll(/\bESCE\s+\d{1,2}[.:]\d{2}/g)].length;
+      const ul = [...flat.matchAll(/\bU\.?L\.?\s+\d{1,2}[.:]\d{2}/g)].length;
+      return {
+        page: page.page,
+        line: page.line || '',
+        gt: page.gt,
+        esce,
+        exits: page.exits ?? 0,
+        ul,
+        returns: page.returns ?? 0,
+        lostExits: Math.max(0, esce - (page.exits ?? 0)),
+        lostReturns: Math.max(0, ul - (page.returns ?? 0)),
+      };
+    })
+    .filter((item) => (item.esce || item.ul) && (item.lostExits || item.lostReturns))
+    .sort((a, b) => b.lostExits + b.lostReturns - (a.lostExits + a.lostReturns));
 }
 
 const MAX_LINE_PAGES = 3;
@@ -351,6 +407,29 @@ export function buildOrariReport({ developments = {}, pages = null, line = '' } 
       lines.push(`  ${item.key} "${item.gt}": ${shown}`);
     });
     if (mixed.length > MAX_MIXED) lines.push(`  … altri ${mixed.length - MAX_MIXED}`);
+  }
+
+  if (pages?.length) {
+    const lost = findLostGraphicData(pages);
+    lines.push('--');
+    if (!lost.length) {
+      lines.push('grafici: su ogni pagina uscite e rientri letti = Esce e U.L. scritti');
+    } else {
+      lines.push(`grafici con uscite o rientri persi: ${lost.length} pagine`);
+      lost.slice(0, MAX_LOST_PAGES).forEach((item) => {
+        lines.push(
+          `  p${item.page} linea ${item.line || '?'} "${item.gt}": Esce ${item.esce} → ${item.exits} · U.L. ${item.ul} → ${item.returns}`,
+        );
+      });
+      if (lost.length > MAX_LOST_PAGES) lines.push(`  … altre ${lost.length - MAX_LOST_PAGES}`);
+    }
+  }
+
+  if (line && pages?.length) {
+    const table = describeTablePage(pages, line);
+    lines.push('--');
+    lines.push(table.length ? `pagina dei turni della linea ${normalizeLineCode(line)}:` : `pagina dei turni della linea ${line}: non trovata`);
+    table.forEach((row) => lines.push(row));
   }
 
   /* Il testo grezzo della pagina dove sta il primo sviluppo mescolato, cosi' com'

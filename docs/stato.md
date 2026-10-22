@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 22 ottobre 2026 · 278 test verdi · issue aperte: #63, #64*
+*Aggiornato: 22 ottobre 2026 · 280 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -103,6 +103,14 @@ su 6. Corretto, con test sul testo vero; `RIENTRI_PARSER_VERSION` e' 3 e le
 schede Uscite e Rientri dicono di ricaricare il PDF quando la lettura e' vecchia.
 **Il difetto toccava probabilmente molte linee** (la 56 feriale ha 8 uscite per
 32 vetture): dopo aver ricaricato il PDF vale la pena guardare il referto.
+
+**Referto, due sezioni per le linee con lo stesso difetto** — «grafici con uscite o
+rientri persi» elenca ogni pagina dove gli «Esce» e gli «U.L.» scritti sono piu'
+di quelli letti (cosi' si trovano in un colpo tutte le linee come la 39), e con
+`&linea=56` «pagina dei turni della linea 56» mostra le righe grezze della
+tabella, dove si vede in che ordine escono etichetta e tratti. Il «testo
+grezzo» preso a ottobre per la 056 era il grafico della 56, non la tabella: ora
+preferisce la pagina con le righe di turno.
 
 **Cambio turno** — su ogni card di turno, anche quella che viene dal PDF,
 «Altre azioni» → **Sostituisci turno** (apre l'inserimento del turno comunicato
