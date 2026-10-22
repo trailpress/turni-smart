@@ -226,14 +226,22 @@ test('senza sovrapposizioni il referto lo dice', () => {
   assert.match(buildOrariReport({ developments }), /sviluppi con tratti sovrapposti: nessuno/);
 });
 
-test('il referto dice su quante pagine le etichette dei turni sono state riallineate', () => {
-  const alte = '56 003\n56 / 3 05.02 GERB - 09.29 SIRA 07.00 07.00 -----\n56 005 56 / 9 12.55 SIRA R 15.28 SIRA\n56 / 5 05.19 GERB - 10.15 GERB 06.51 06.51 -----\n56 / 6 13.03 SIRA A 14.58 SIRA';
+test('il referto dice su quante pagine le righe dei turni sono state riassemblate', () => {
+  const dalBasso = [
+    '56 / 6 14.58 SIRA R 18.23 SIRA',
+    '56 056 56 / 13 11.08 SIRA R 13.37 SIRA 05.54 05.54 -----',
+    '56 / 11 13.45 SIRA A 15.43 SIRA',
+    '56 058 56 / 8 08.08 SIRA A 12.41 SIRA 06.31 06.31 -----',
+  ].join('\n');
   const diagnostics = [];
-  const developments = parseOrari(['GTT gruppo 56 - LUN - VEN - Versione B06\n05 101 5 / 1 04.48 GERB - 10.15 CATT', 'GTT gruppo 56 - LUN - VEN - Versione B06\n' + alte], { diagnostics });
+  const developments = parseOrari(
+    ['GTT gruppo 56 - LUN - VEN - Versione B06\n05 101 5 / 1 04.48 GERB - 10.15 CATT', 'GTT gruppo 56 - LUN - VEN - Versione B06\n' + dalBasso],
+    { diagnostics },
+  );
   const report = buildOrariReport({ developments, pages: diagnostics });
 
-  assert.match(report, /etichette dei turni riallineate su 1 pagine \(p2\)/);
-  assert.match(buildOrariReport({ developments, pages: [{ gt: 'LUN - VEN', own: 'LUN - VEN', page: 1 }] }), /riallineate: nessuna pagina/);
+  assert.match(report, /righe dei turni riassemblate su 1 pagine \(p2\)/);
+  assert.match(buildOrariReport({ developments, pages: [{ gt: 'LUN - VEN', own: 'LUN - VEN', page: 1 }] }), /riassemblate: nessuna pagina/);
 });
 
 test('il referto mostra il testo grezzo vicino al primo sviluppo mescolato', () => {
@@ -259,7 +267,8 @@ test('con la linea nel referto si vedono gli Esce e gli I.L. della sua pagina, e
   assert.match(report, /I\.L\. 2: 06\.00 CAIQ · 06\.45 CAIQ/);
   assert.match(report, /abbinate 2: 05:50→06:00 CAIQ · 06:35→06:45 CAIQ/);
   assert.match(report, /tempi uscita\/rientro: CAIQ 10\/10/);
-  assert.doesNotMatch(report, /ESCE 04\.13/);
+  const sezione39 = report.slice(report.indexOf('grafico della linea 39:')).split('\n--')[0];
+  assert.doesNotMatch(sezione39, /ESCE 04\.13/);
   assert.match(buildOrariReport({ developments: {}, line: '77', pages }), /nessuna pagina trovata/);
 });
 
@@ -290,4 +299,24 @@ test('con la linea nel referto si vedono le righe grezze della pagina dei turni,
   assert.match(report, /pagina dei turni della linea 56:/);
   assert.match(report, /\| 56 005 56 \/ 9 12\.55 SIRA R 15\.28 SIRA/);
   assert.doesNotMatch(report, /PROGRAMMAZIONE 56 AUTOBUS/);
+});
+
+test('per le pagine con dati persi il referto mostra cosa e scritto e cosa si abbina', () => {
+  const pages = [
+    {
+      page: 127,
+      line: '55',
+      gt: 'FESTIVO',
+      exits: 1,
+      returns: 1,
+      text: '1 ESCE 05.00 ORSN GER I.L. 05.10 ORSN LINEA ENTRA U.L. 20.02 20.12 ORSN LINEA U.L. 21.00 ORSN LINEA U.L. 22.00 ORSN ENTRA 21.10 ENTRA 22.10',
+    },
+  ];
+  const report = buildOrariReport({ developments: {}, pages });
+
+  assert.match(report, /dettaglio p127 linea 55 "FESTIVO":/);
+  assert.match(report, /U\.L\. 3: 20\.02 20\.12 ORSN · 21\.00 ORSN · 22\.00 ORSN/);
+  assert.match(report, /Entra 2: 21\.10 · 22\.10/);
+  assert.match(report, /rientri abbinati 3:/);
+  assert.match(report, /testo: .*U\.L\. 20\.02/);
 });

@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 22 ottobre 2026 · 280 test verdi · issue aperte: #63, #64*
+*Aggiornato: 22 ottobre 2026 · 282 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -65,21 +65,22 @@ quelli della tabella dei tempi, non le ore di una ripresa. Senza quella pagina
 lo dicono, invece di arrangiarsi.
 
 **Sviluppo turno** — i tratti che si sovrappongono nel tempo non stanno nello
-stesso turno: una persona non guida due tratti insieme. Quando il codice del
-turno non si legge davanti alla riga, il tratto si attacca al turno che lo
-precede nel testo e due turni finiscono sotto la stessa chiave (visto il 9
-ottobre sul turno 056 della linea 56: vetture 14, 13, 14 e 9, tre tratti
-accavallati). Il parser li separa in riprese distinte a lettura finita, e
-`getDevSegments` scarta le sovrapposizioni anche nelle letture gia' salvate, che
-non serve ricaricare. Il referto `?diag=orari` elenca gli sviluppi con tratti
-sovrapposti, con vettura e ripresa di ogni riga. **Causa vera, dal referto del 9 ottobre:** nel PDF
-l'etichetta del turno («56 301») e' disegnata piu' in alto della sua riga, quindi
-nel testo estratto sta sulla riga dell'ultimo tratto del turno prima, e ogni
-riga di continuazione passa al turno dopo. `realignTurnLabels` rimette le
-etichette sulle loro righe, ma solo se per ogni turno della pagina il «tempo
-netto di guida» e' la somma delle durate dei tratti: senza quella prova il testo
-non si tocca. **Le letture gia' salvate vanno rifatte: ricaricare il PDF
-Orari.**
+stesso turno: una persona non guida due tratti insieme. **Causa del 9 ottobre,
+dal referto del 22 (turno 056, linea 56):** sull'iPhone il testo della pagina dei
+turni esce **dal basso in alto**, con le righe di continuazione *prima* di quella
+che ha l'etichetta, e con la tabella di San Paolo e quella del Gerbido sulle
+stesse righe; sul Mac esce dall'alto in basso, ed e' per questo che li' andava.
+Il parser attaccava le continuazioni al turno letto per ultimo, e uno sviluppo su
+due usciva mescolato. `reassembleTurnRows` (in `parseOrari`, prima del parser)
+non presume l'ordine: ogni continuazione va al turno il cui **tempo netto di
+guida** - in coda alla sua prima riga - torna con la somma delle durate dei suoi
+tratti, in successione di tempo. Se per piu' del 15% dei turni la pagina non
+regge a quel controllo, il testo resta com'e'; sotto, i turni senza prova restano
+con la sola prima riga e le righe senza turno si scartano. Rete di sicurezza:
+`separateOverlappingRuns` e `getDevSegments` scartano comunque le
+sovrapposizioni, anche nelle letture gia' salvate. **Le letture salvate prima
+vanno rifatte: ricaricare il PDF Orari.** Il referto dice su quante pagine le
+righe sono state riassemblate e quali pagine hanno turni senza prova.
 
 **Card del turno: durata, attacchi tra, intervallo** — tre riquadri con la loro
 etichetta su ogni card di turno: **Durata** (dalla preconoscenza, o dagli orari

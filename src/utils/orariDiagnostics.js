@@ -1,5 +1,5 @@
 import { DEPOT_CODE, getServiceTypes, normalizePlace } from './depotReturns.js';
-import { isRientriKey, isUsciteKey, parseDepotExits, parseDepotTransferTimes } from '../parserRientri.js';
+import { isRientriKey, isUsciteKey, parseDepotExits, parseDepotReturns, parseDepotTransferTimes } from '../parserRientri.js';
 import { normalizeLineCode } from '../constants/depotGerbido.js';
 import { timeToMinutes } from './timeUtils.js';
 
@@ -278,6 +278,31 @@ export function findLostGraphicData(pages = []) {
     .sort((a, b) => b.lostExits + b.lostReturns - (a.lostExits + a.lostReturns));
 }
 
+const MAX_LOST_DETAIL = 6;
+const LOST_EXCERPT_CHARS = 700;
+
+function describeLostPage(page, item) {
+  const flat = page.text.toUpperCase().replace(/\s+/g, ' ');
+  const list = (re) => [...flat.matchAll(re)].map((m) => m.slice(1).filter(Boolean).join(' '));
+  const ul = list(/\bU\.?L\.?\s+(\d{1,2}[.:]\d{2})(?:\s+(\d{1,2}[.:]\d{2}))?\s+([A-Z]{4})/g);
+  const entra = list(/\bENTRA\s+(\d{1,2}[.:]\d{2})/g);
+  const esce = list(/\bESCE\s+(\d{1,2}[.:]\d{2})\s+([A-Z]{4})/g);
+  const il = list(/\bI\.?L\.?\s+(?:[A-Z]{4}\s+){0,2}(\d{1,2}[.:]\d{2})\s+([A-Z]{4})/g);
+  const returns = parseDepotReturns(page.text, { gt: page.gt, line: item.line }).map((r) => `${r.start}→${r.end} ${r.loc_s}`);
+  const exits = parseDepotExits(page.text, { gt: page.gt, line: item.line }).map((e) => `${e.start}→${e.end} ${e.loc_e}`);
+  const anchor = Math.max(0, flat.search(/U\.?L\.?\s+\d/));
+  return [
+    `  dettaglio p${item.page} linea ${item.line || '?'} "${item.gt}":`,
+    `    U.L. ${ul.length}: ${ul.join(' · ') || '-'}`,
+    `    Entra ${entra.length}: ${entra.join(' · ') || '-'}`,
+    `    rientri abbinati ${returns.length}: ${returns.join(' · ') || '-'}`,
+    `    Esce ${esce.length}: ${esce.join(' · ') || '-'}`,
+    `    I.L. ${il.length}: ${il.join(' · ') || '-'}`,
+    `    uscite abbinate ${exits.length}: ${exits.join(' · ') || '-'}`,
+    `    testo: ${flat.slice(Math.max(0, anchor - 80), Math.max(0, anchor - 80) + LOST_EXCERPT_CHARS)}`,
+  ];
+}
+
 const MAX_LINE_PAGES = 3;
 const LINE_EXCERPT_CHARS = 900;
 
@@ -337,15 +362,22 @@ export function buildOrariReport({ developments = {}, pages = null, line = '' } 
       lines.push(`${range} "${run.gt}" [${run.service}] ric ${run.recognized}/${run.pages}`);
     });
     if (summary.runs.length > MAX_RUNS) lines.push(`… altre ${summary.runs.length - MAX_RUNS} tratte`);
-    /* Dice che questa versione dell'app ha la correzione delle etichette dei
-       turni e quante pagine ne hanno avuto bisogno: se la riga manca, il
+    /* Dice che questa versione dell'app riassembla le righe dei turni e quante
+       pagine ne hanno avuto bisogno: se la riga manca, il
        referto viene da una versione vecchia. */
     const realigned = pages.filter((page) => page.realigned).map((page) => page.page);
+    const doubtful = pages.filter((page) => page.rows && (page.rows.failed || page.rows.orphans));
     lines.push(
       realigned.length
-        ? `etichette dei turni riallineate su ${realigned.length} pagine (p${realigned.slice(0, 12).join(' p')}${realigned.length > 12 ? ' …' : ''})`
-        : 'etichette dei turni riallineate: nessuna pagina',
+        ? `righe dei turni riassemblate su ${realigned.length} pagine (p${realigned.slice(0, 12).join(' p')}${realigned.length > 12 ? ' …' : ''})`
+        : 'righe dei turni riassemblate: nessuna pagina',
     );
+    if (doubtful.length) {
+      lines.push(`righe dei turni senza il tempo netto che torna: ${doubtful.length} pagine`);
+      doubtful.slice(0, 12).forEach((page) => {
+        lines.push(`  p${page.page} "${page.gt}": turni ${page.rows.heads} · senza prova ${page.rows.failed} · righe scartate ${page.rows.orphans}`);
+      });
+    }
   } else {
     lines.push('pagine: non disponibili (ricarica il PDF Orari con la diagnostica attiva)');
   }
@@ -422,6 +454,12 @@ export function buildOrariReport({ developments = {}, pages = null, line = '' } 
         );
       });
       if (lost.length > MAX_LOST_PAGES) lines.push(`  … altre ${lost.length - MAX_LOST_PAGES}`);
+      /* Per le prime pagine, cosa c'e' scritto: serve a vedere in che forma i
+         dati che mancano sono scritti, senza avere il PDF. */
+      lost.slice(0, MAX_LOST_DETAIL).forEach((item) => {
+        const page = pages.find((entry) => entry.page === item.page);
+        if (page) describeLostPage(page, item).forEach((row) => lines.push(row));
+      });
     }
   }
 

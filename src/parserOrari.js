@@ -248,78 +248,147 @@ function dropOverlaps(sortedSegments) {
   return kept;
 }
 
-const LABEL_ROW_RE = /^([A-Z0-9()]+)\s+(\d{1,3})\s+(.+)$/i;
-const LABEL_ONLY_RE = /^[A-Z0-9()]+\s+\d{1,3}$/i;
-const SEGMENT_START_RE = /^[A-Z0-9()]+\s*\/\s*\d+\s+\d{2}[.:]\d{2}\s/i;
-const SEGMENT_TIMES_RE = /\/\s*\d+\s+(\d{2})[.:](\d{2})\s+[A-Z]{2,4}\s+(?:[AR-]\s+)?(\d{2})[.:](\d{2})\s+[A-Z]{2,4}/i;
-const TOTALS_RE = /(\d{2})[.:](\d{2})\s+\d{2}[.:]\d{2}(?:\s+(?:-+|\d{2}[.:]\d{2}))?\s*$/;
+/* Una riga di turno, ovunque stia nel testo: l'etichetta («56 301», quando c'e'),
+   il tratto, e in coda alla prima riga di ogni turno il «tempo netto di guida»
+   seguito dalle ore ordinarie e dallo straordinario. */
+const ROW_ITEM_RE =
+  /(?:([A-Z0-9()]{1,6})\s+(\d{1,3})\s+)?([A-Z0-9()]{1,6})\s*\/\s*(\d+)\s+(\d{2})[.:](\d{2})\s+([A-Z]{2,4})\s+([AR-])\s+(\d{2})[.:](\d{2})\s+([A-Z]{2,4})(?:\s+(\d{2})[.:](\d{2})\s+\d{2}[.:]\d{2}(?:\s+(?:-+|\d{2}[.:]\d{2}))?)?/gi;
+const MAX_TAIL_GAP = 12 * 60;
+const TAIL_WINDOW = 14;
 
-/* Nella pagina dei turni l'etichetta («56 301») puo' essere disegnata piu' in
-   alto della sua riga: nel testo estratto finisce sulla riga dell'ultimo tratto
-   del turno prima, e quel tratto passa al turno sbagliato. Succede su tutte le
-   righe di continuazione, quindi gli sviluppi escono mescolati.
-   La pagina porta con se' la prova: in coda alla prima riga di ogni turno c'e'
-   il «tempo netto di guida», che e' la somma delle durate dei suoi tratti. Le
-   etichette e le prime righe compaiono nello stesso ordine, quindi la n-esima
-   etichetta va sulla n-esima prima riga. Si fa solo se la somma torna per ogni
-   turno della pagina; altrimenti il testo resta com'e'. */
-function realignTurnLabels(text) {
+function itemMinutes(item) {
+  return (item.endMinutes - item.startMinutes + 1440) % 1440;
+}
+
+/* Fra la fine di un tratto e l'inizio del successivo, mai piu' di dodici ore e
+   mai all'indietro: un tratto che comincia prima che il precedente finisca non
+   e' dello stesso turno. */
+function gapBetween(previousEnd, nextStart) {
+  return (nextStart - previousEnd + 1440) % 1440;
+}
+
+function chainSolutions(head, tails, need) {
+  const solutions = [];
+
+  function walk(previousEnd, remaining, chosen) {
+    if (chosen.length && Math.abs(remaining) <= 1) {
+      solutions.push(chosen);
+      return;
+    }
+    if (chosen.length >= 3) return;
+    tails.forEach((tail) => {
+      if (chosen.includes(tail)) return;
+      const gap = gapBetween(previousEnd, tail.startMinutes);
+      if (gap > MAX_TAIL_GAP) return;
+      const duration = itemMinutes(tail);
+      if (duration > remaining + 1) return;
+      walk(tail.startMinutes + duration, remaining - duration, [...chosen, tail]);
+    });
+  }
+
+  walk(head.endMinutes, need, []);
+  return solutions;
+}
+
+/* Il testo della pagina dei turni non esce sempre nello stesso ordine. Sul Mac
+   va dall'alto in basso: l'etichetta, poi le righe di continuazione. Sull'iPhone
+   (referto del 22 ottobre) va dal basso in alto, con le continuazioni *prima*
+   della riga che ha l'etichetta, e per di piu' la tabella di San Paolo e quella
+   del Gerbido condividono le righe. Il parser attacca le continuazioni a
+   quello che ha letto per ultimo: sull'iPhone il tratto delle 14:58 della 056
+   finiva sotto il 058, e uno sviluppo su due usciva mescolato.
+   Qui l'ordine non si presume: ogni continuazione va al turno il cui tempo
+   netto di guida - scritto in coda alla sua prima riga - torna con la somma delle
+   durate dei suoi tratti, in successione di tempo. Se la pagina non regge a
+   questo controllo il testo resta com'e'. */
+function reassembleTurnRows(text) {
+  const none = { text, stats: null };
   const rawLines = String(text || '').split('\n');
-  const rows = rawLines.map((raw) => {
-    const line = raw.trim();
-    const labelMatch = line.match(LABEL_ROW_RE);
-    const labeled = Boolean(labelMatch && SEGMENT_START_RE.test(labelMatch[3]));
-    const labelOnly = !labeled && LABEL_ONLY_RE.test(line);
-    const body = labeled ? labelMatch[3] : labelOnly ? '' : line;
-    const times = body.match(SEGMENT_TIMES_RE);
-    const totals = body.match(TOTALS_RE);
-    return {
-      raw,
-      body,
-      label: labeled ? `${labelMatch[1]} ${labelMatch[2]}` : labelOnly ? line : '',
-      isSegment: SEGMENT_START_RE.test(body),
-      minutes: times ? (Number(times[3]) * 60 + Number(times[4]) - Number(times[1]) * 60 - Number(times[2]) + 1440) % 1440 : 0,
-      net: totals ? Number(totals[1]) * 60 + Number(totals[2]) : null,
-    };
-  });
+  const items = [];
+  const otherLines = [];
 
-  const headers = rows.filter((row) => row.isSegment && row.net !== null);
-  const labels = rows.filter((row) => row.label).map((row) => row.label);
-  if (headers.length < 2 || headers.length !== labels.length) return text;
-
-  /* Ogni turno e' una prima riga con il suo netto e i tratti senza netto che la
-     seguono: la somma delle durate deve tornare, per tutti. */
-  const sums = new Map();
-  let current = null;
-  rows.forEach((row) => {
-    if (!row.isSegment) return;
-    if (row.net !== null) {
-      current = { net: row.net, sum: row.minutes };
-      sums.set(row, current);
-    } else if (current) {
-      current.sum += row.minutes;
+  rawLines.forEach((line, lineIndex) => {
+    const matches = [...line.toUpperCase().matchAll(ROW_ITEM_RE)];
+    if (!matches.length) {
+      otherLines.push(line);
+      return;
     }
+    matches.forEach((m) => {
+      items.push({
+        order: items.length,
+        lineIndex,
+        label: m[1] && m[2] ? `${m[1]} ${m[2]}` : '',
+        startMinutes: Number(m[5]) * 60 + Number(m[6]),
+        endMinutes: Number(m[9]) * 60 + Number(m[10]),
+        net: m[12] === undefined ? null : Number(m[12]) * 60 + Number(m[13]),
+        text: m[0].trim(),
+      });
+    });
   });
-  if (![...sums.values()].every((group) => Math.abs(group.sum - group.net) <= 1)) return text;
 
-  let changed = false;
-  const lines = [];
-  let headerIndex = 0;
-  rows.forEach((row) => {
-    if (row.isSegment && row.net !== null) {
-      const label = labels[headerIndex];
-      headerIndex += 1;
-      if (row.label !== label) changed = true;
-      lines.push(`${label} ${row.body}`);
-    } else if (row.label) {
-      changed = true;
-      if (row.body) lines.push(row.body);
-    } else {
-      lines.push(row.raw);
+  const heads = items.filter((item) => item.net !== null);
+  const tails = items.filter((item) => item.net === null);
+  if (heads.length < 2 || heads.some((head) => !head.label)) return none;
+
+  const candidatesFor = (head, used) =>
+    tails
+      .filter((tail) => !used.has(tail) && Math.abs(tail.order - head.order) <= TAIL_WINDOW)
+      .sort((a, b) => Math.abs(a.order - head.order) - Math.abs(b.order - head.order));
+
+  const assigned = new Map();
+  const used = new Set();
+  const pending = new Set(heads);
+  let failed = 0;
+
+  heads.forEach((head) => {
+    if (Math.abs(head.net - itemMinutes(head)) <= 1) {
+      assigned.set(head, []);
+      pending.delete(head);
     }
   });
 
-  return changed ? lines.join('\n') : text;
+  /* Prima i turni con una sola soluzione, poi, a parita', la piu' vicina: cosi'
+     una continuazione non viene rubata da un turno che ne ha altre. */
+  while (pending.size) {
+    const options = [...pending].map((head) => ({
+      head,
+      solutions: chainSolutions(head, candidatesFor(head, used), head.net - itemMinutes(head)),
+    }));
+    const solved = options.filter((option) => option.solutions.length);
+    if (!solved.length) {
+      failed = pending.size;
+      break;
+    }
+    const distance = (solution, head) => solution.reduce((sum, tail) => sum + Math.abs(tail.order - head.order), 0);
+    const unique = solved.find((option) => option.solutions.length === 1);
+    const choice =
+      unique ||
+      solved.sort((a, b) => distance(a.solutions[0], a.head) - distance(b.solutions[0], b.head))[0];
+    const best = choice.solutions.slice().sort((a, b) => distance(a, choice.head) - distance(b, choice.head))[0];
+    assigned.set(choice.head, best);
+    best.forEach((tail) => used.add(tail));
+    pending.delete(choice.head);
+  }
+
+  const orphans = tails.filter((tail) => !used.has(tail)).length;
+  const stats = { heads: heads.length, failed, orphans };
+  /* Qualche turno senza prova (un netto che non e' la somma: succede) non
+     butta la pagina; se sono troppi, la lettura non e' attendibile e il testo
+     resta com'e'. Le righe senza turno si scartano: attaccarle a quello letto
+     per ultimo e' proprio il difetto. */
+  if (failed + orphans > Math.max(1, Math.floor(heads.length * 0.15))) return { text, stats };
+
+  const rebuilt = [];
+  heads.forEach((head) => {
+    rebuilt.push(head.text);
+    (assigned.get(head) || [])
+      .slice()
+      .sort((a, b) => gapBetween(head.endMinutes, a.startMinutes) - gapBetween(head.endMinutes, b.startMinutes))
+      .forEach((tail) => rebuilt.push(tail.text));
+  });
+
+  const result = [...otherLines, ...rebuilt].join('\n');
+  return { text: result, stats };
 }
 
 /* Quando il codice del turno non si legge davanti alla riga, il tratto si
@@ -534,7 +603,8 @@ export function parseOrari(pagesText, { diagnostics = null, places = null } = {}
   const tableStateByService = {};
 
   pages.forEach((rawPageText, index) => {
-    const pageText = realignTurnLabels(rawPageText);
+    const reassembled = reassembleTurnRows(rawPageText);
+    const pageText = reassembled.text;
     const { gt, ver } = detectGt(pageText, lastGt);
     if (gt) lastGt = gt;
     const resolved = gt || lastGt || 'TUTTI';
@@ -543,7 +613,7 @@ export function parseOrari(pagesText, { diagnostics = null, places = null } = {}
       /* Cosa la pagina dice di se', senza eredita': quando e' vuoto la pagina
          non e' stata riconosciuta e sta prendendo il tipo da quella prima. */
       const own = detectGt(pageText, '');
-      diagnostics.push({ gt: resolved, own: own.gt, page: index + 1, ver: own.ver, realigned: pageText !== rawPageText, text: rawPageText });
+      diagnostics.push({ gt: resolved, own: own.gt, page: index + 1, ver: own.ver, realigned: pageText !== rawPageText, rows: reassembled.stats, text: rawPageText });
     }
 
     const serviceKey = `${resolved}|${ver || ''}`;
