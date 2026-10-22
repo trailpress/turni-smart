@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { parseOrari } from '../src/parserOrari.js';
 import {
   buildOrariReport,
+  findLostGraphicData,
   compareReturnsAndExits,
   countExits,
   summarizeByGt,
@@ -260,4 +261,33 @@ test('con la linea nel referto si vedono gli Esce e gli I.L. della sua pagina, e
   assert.match(report, /tempi uscita\/rientro: CAIQ 10\/10/);
   assert.doesNotMatch(report, /ESCE 04\.13/);
   assert.match(buildOrariReport({ developments: {}, line: '77', pages }), /nessuna pagina trovata/);
+});
+
+test('il referto elenca le pagine del grafico dove si leggono meno uscite e rientri di quanti ne sono scritti', () => {
+  const pages = [
+    { page: 25, line: '39', gt: 'LUN - VEN', exits: 3, returns: 3, text: '1 ESCE 04.35 BABA 2 ESCE 07.25 CAIQ 3 ESCE 06.04 CAIQ 4 ESCE 12.54 CAIQ 5 ESCE 04.50 CAIQ 6 ESCE 06.35 CAIQ U.L. 10.22 U.L. 21.40 U.L. 21.19 U.L. 09.45 U.L. 23.47 U.L. 20.00' },
+    { page: 78, line: '39', gt: 'SABATO', exits: 4, returns: 4, text: '1 ESCE 04.39 BABA 4 ESCE 11.52 CAIQ 2 ESCE 06.00 CAIQ 3 ESCE 04.46 CAIQ U.L. 23.47 U.L. 21.23 U.L. 09.34 U.L. 20.59' },
+  ];
+  const lost = findLostGraphicData(pages);
+  assert.equal(lost.length, 1);
+  assert.deepEqual([lost[0].page, lost[0].lostExits, lost[0].lostReturns], [25, 3, 3]);
+
+  const report = buildOrariReport({ developments: {}, pages });
+  assert.match(report, /grafici con uscite o rientri persi: 1 pagine/);
+  assert.match(report, /p25 linea 39 "LUN - VEN": Esce 6 → 3 · U\.L\. 6 → 3/);
+  assert.match(buildOrariReport({ developments: {}, pages: [pages[1]] }), /uscite e rientri letti = Esce e U\.L\. scritti/);
+});
+
+test('con la linea nel referto si vedono le righe grezze della pagina dei turni, non quelle del grafico', () => {
+  const grafico = { page: 3, gt: 'LUN - VEN', text: 'PROGRAMMAZIONE 56 AUTOBUS 18.23 403 20.22 406 11.08 13.37 14.58' };
+  const tabella = {
+    page: 20,
+    gt: 'LUN - VEN',
+    text: 'DEPOSITO GERBIDO\n56 003\n56 / 3 05.02 GERB - 09.29 SIRA 07.00 07.00 -----\n56 005 56 / 9 12.55 SIRA R 15.28 SIRA\n56 / 5 05.19 GERB - 10.15 GERB 06.51 06.51 -----',
+  };
+  const report = buildOrariReport({ developments: {}, line: '56', pages: [grafico, tabella] });
+
+  assert.match(report, /pagina dei turni della linea 56:/);
+  assert.match(report, /\| 56 005 56 \/ 9 12\.55 SIRA R 15\.28 SIRA/);
+  assert.doesNotMatch(report, /PROGRAMMAZIONE 56 AUTOBUS/);
 });
