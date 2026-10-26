@@ -862,6 +862,16 @@ function pickBestWindowChain(segments, preShift) {
     .sort((a, b) => b.covered - a.covered || a.gaps - b.gaps || b.count - a.count)[0]?.chain || [];
 }
 
+/* I rientri e le uscite stanno nella stessa mappa degli sviluppi, sotto chiavi
+   che nessun turno puo' avere (RIENTRI 56 ..., USCITE 56 ...): non sono tratti
+   di turno e non devono finire in uno sviluppo, nemmeno quando un orario e un
+   posto sembrano combaciare. */
+function turnSegments(developments) {
+  return Object.entries(developments || {})
+    .filter(([key]) => !isGraphicKey(key))
+    .flatMap(([, segments]) => segments || []);
+}
+
 function findExactShiftPath(developments, line, date, preShift) {
   const lineNorm = normalizeLineCode(line);
   const shiftStart = compactToMinutes(preShift?.i);
@@ -874,8 +884,7 @@ function findExactShiftPath(developments, line, date, preShift) {
   if (shiftEnd < shiftStart) shiftEnd += 24 * 60;
 
   const seen = new Set();
-  const baseCandidates = Object.values(developments || {})
-    .flat()
+  const baseCandidates = turnSegments(developments)
     .filter((segment) => (segment.lineaNorm || normalizeLineCode(segment.ln)) === lineNorm)
     .filter((segment) => isWithinShiftWindow(segment, preShift))
     .filter((segment) => {
@@ -944,8 +953,7 @@ function completeShiftFromWindow(developments, line, date, preShift, baseSegment
   const sortedBase = sortSegments(baseSegments);
   if (reachesPreShiftEnd(sortedBase[sortedBase.length - 1], preShift)) return sortedBase;
 
-  const basePool = Object.values(developments || {})
-    .flat()
+  const basePool = turnSegments(developments)
     .filter((segment) => (segment.lineaNorm || normalizeLineCode(segment.ln)) === lineNorm)
     .filter((segment) => isWithinShiftWindow(segment, preShift));
   const dayPool = basePool.filter((segment) => matchesServiceDay(segment.gt, date));
@@ -1012,6 +1020,7 @@ function findFallbackSegments(developments, line, shiftNumber, date, preShift) {
   if (!preShift) return [];
 
   const best = Object.entries(developments || {})
+    .filter(([key]) => !isGraphicKey(key))
     .map(([key, segments]) => ({
       key,
       segments,

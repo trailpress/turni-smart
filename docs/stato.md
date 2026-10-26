@@ -4,7 +4,7 @@
 E' il solo posto che dice cosa e' in corso e chi tiene cosa. Senza, due
 conversazioni rifanno lo stesso lavoro in modo diverso.
 
-*Aggiornato: 22 ottobre 2026 · 287 test verdi · issue aperte: #63, #64*
+*Aggiornato: 22 ottobre 2026 · 289 test verdi · issue aperte: #63, #64*
 
 ## Per aprire la prossima sessione
 
@@ -91,6 +91,16 @@ i tratti si accavallano, e se sotto lo stesso turno ci sono piu' gruppi di righe
 Una lettura salvata prima di questa versione non ha il tempo netto: la schermata
 dice «controllo non disponibile: ricarica il PDF Orari». Serve a controllare un
 turno senza aspettare il giorno in cui lo si fa (`utils/developmentCheck.js`).
+
+**Rientri e uscite non sono turni** — le loro chiavi nella mappa degli sviluppi
+(`RIENTRI 56 LUN - VEN`, `USCITE 56 ...`) si leggevano in «Linee» come «turno
+56» della linea 56 (la seconda parola della chiave e' il numero della linea, che
+per la 56 coincide con un turno): il 26 ottobre comparivano 16 «gruppi» di
+rientri al posto dello sviluppo. Adesso `utils/lineIndex.js` (indice di «Linee»)
+scarta le chiavi del grafico e i residui come `CODICI 55` o `A55B0101 55`, la cui
+prima parola non e' la linea dei tratti; e le ricerche di `parserOrari.js` che
+scorrono tutte le chiavi (percorso esatto, completamento, ripiego) non pescano
+piu' rientri e uscite come se fossero tratti di turno.
 
 **Card del turno: durata, attacchi tra, intervallo** — tre riquadri con la loro
 etichetta su ogni card di turno: **Durata** (dalla preconoscenza, o dagli orari
